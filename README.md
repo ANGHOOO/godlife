@@ -5,6 +5,12 @@ GodLife는 운동 기록 자동화와 독서 리마인드를 결합한 습관 �
 ## 실행
 - `uv sync`
 - `uv run python main.py`
+- 백엔드 마이그레이션:
+  - `cd apps/backend`
+  - `export DATABASE_URL=postgresql+psycopg://<user>:<password>@127.0.0.1:5432/godlife`
+  - `alembic -c alembic.ini upgrade head`
+  - `alembic -c alembic.ini history`
+  - `alembic -c alembic.ini current`
 
 ## 백엔드 공통 기술 스택
 - 패키지/의존성 관리: uv
