@@ -25,10 +25,16 @@ repos:
       - id: ty-check
         name: ty check
         entry: ty check
+        args:
+          - --extra-search-path
+          - apps/backend/src
         language: python
         types: [python]
         additional_dependencies:
           - "ty==0.0.17"
+          - "alembic>=1.13"
+          - "sqlalchemy>=2.0"
+          - "psycopg[binary]>=3.1"
       - id: pytest
         name: pytest
         entry: pytest

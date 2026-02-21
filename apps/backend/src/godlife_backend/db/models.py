@@ -8,7 +8,6 @@ from sqlalchemy import (
     Boolean,
     Date,
     DateTime,
-    Enum as SqlEnum,
     ForeignKey,
     Index,
     Integer,
@@ -16,6 +15,9 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     func,
+)
+from sqlalchemy import (
+    Enum as SqlEnum,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -34,12 +36,20 @@ from .enums import (
 class User(Base):
     __tablename__ = "users"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
     kakao_user_id: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     name: Mapped[str] = mapped_column(String(120), nullable=False)
-    timezone: Mapped[str] = mapped_column(String(80), nullable=False, default="Asia/Seoul")
-    status: Mapped[UserStatus] = mapped_column(SqlEnum(UserStatus), nullable=False, default=UserStatus.ACTIVE)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=sa.func.now())
+    timezone: Mapped[str] = mapped_column(
+        String(80), nullable=False, default="Asia/Seoul"
+    )
+    status: Mapped[UserStatus] = mapped_column(
+        SqlEnum(UserStatus), nullable=False, default=UserStatus.ACTIVE
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
@@ -47,11 +57,11 @@ class User(Base):
         onupdate=func.now(),
     )
 
-    profile: Mapped["UserProfile"] = relationship(back_populates="user", uselist=False)
-    exercise_plans: Mapped[list["ExercisePlan"]] = relationship(back_populates="user")
-    reading_plans: Mapped[list["ReadingPlan"]] = relationship(back_populates="user")
-    reading_logs: Mapped[list["ReadingLog"]] = relationship(back_populates="user")
-    notifications: Mapped[list["Notification"]] = relationship(back_populates="user")
+    profile: Mapped[UserProfile] = relationship(back_populates="user", uselist=False)
+    exercise_plans: Mapped[list[ExercisePlan]] = relationship(back_populates="user")
+    reading_plans: Mapped[list[ReadingPlan]] = relationship(back_populates="user")
+    reading_logs: Mapped[list[ReadingLog]] = relationship(back_populates="user")
+    notifications: Mapped[list[Notification]] = relationship(back_populates="user")
 
     __table_args__ = (Index("ix_users_kakao_user_id", "kakao_user_id"),)
 
@@ -59,7 +69,9 @@ class User(Base):
 class UserProfile(Base):
     __tablename__ = "user_profiles"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
@@ -74,7 +86,9 @@ class UserProfile(Base):
     max_daily_minutes: Mapped[int | None] = mapped_column(Integer)
     available_equipment: Mapped[str | None] = mapped_column(Text)
     injury_notes: Mapped[str | None] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=sa.func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
@@ -88,15 +102,21 @@ class UserProfile(Base):
 class ExercisePlan(Base):
     __tablename__ = "exercise_plans"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
     )
     target_date: Mapped[date] = mapped_column(Date, nullable=False)
     source: Mapped[str] = mapped_column(String(16), nullable=False)
-    status: Mapped[PlanStatus] = mapped_column(SqlEnum(PlanStatus), nullable=False, default=PlanStatus.DRAFT)
+    status: Mapped[PlanStatus] = mapped_column(
+        SqlEnum(PlanStatus), nullable=False, default=PlanStatus.DRAFT
+    )
     summary: Mapped[str | None] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=sa.func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
@@ -105,7 +125,9 @@ class ExercisePlan(Base):
     )
 
     user: Mapped[User] = relationship(back_populates="exercise_plans")
-    sessions: Mapped[list["ExerciseSession"]] = relationship(back_populates="plan", cascade="all, delete-orphan")
+    sessions: Mapped[list[ExerciseSession]] = relationship(
+        back_populates="plan", cascade="all, delete-orphan"
+    )
 
     __table_args__ = (
         Index("ix_exercise_plans_target_date_status", "target_date", "status"),
@@ -116,7 +138,9 @@ class ExercisePlan(Base):
 class ExerciseSession(Base):
     __tablename__ = "exercise_sessions"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
     plan_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("exercise_plans.id", ondelete="CASCADE"),
@@ -130,7 +154,9 @@ class ExerciseSession(Base):
     target_weight_kg: Mapped[float | None] = mapped_column(sa.Float())
     target_rest_sec: Mapped[int | None] = mapped_column(Integer)
     notes: Mapped[str | None] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=sa.func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
@@ -139,26 +165,34 @@ class ExerciseSession(Base):
     )
 
     plan: Mapped[ExercisePlan] = relationship(back_populates="sessions")
-    set_states: Mapped[list["ExerciseSetState"]] = relationship(back_populates="session", cascade="all, delete-orphan")
+    set_states: Mapped[list[ExerciseSetState]] = relationship(
+        back_populates="session", cascade="all, delete-orphan"
+    )
 
 
 class ExerciseSetState(Base):
     __tablename__ = "exercise_set_states"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
     session_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("exercise_sessions.id", ondelete="CASCADE"),
         nullable=False,
     )
     set_no: Mapped[int] = mapped_column(Integer, nullable=False)
-    status: Mapped[SetStatus] = mapped_column(SqlEnum(SetStatus), nullable=False, default=SetStatus.PENDING)
+    status: Mapped[SetStatus] = mapped_column(
+        SqlEnum(SetStatus), nullable=False, default=SetStatus.PENDING
+    )
     performed_reps: Mapped[int | None] = mapped_column(Integer)
     performed_weight_kg: Mapped[float | None] = mapped_column(sa.Float())
     actual_rest_sec: Mapped[int | None] = mapped_column(Integer)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     skipped_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=sa.func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
@@ -178,14 +212,18 @@ class ExerciseSetState(Base):
 class ReadingPlan(Base):
     __tablename__ = "reading_plans"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
     )
     remind_time: Mapped[time] = mapped_column(sa.Time(), nullable=False)
     goal_minutes: Mapped[int] = mapped_column(Integer, nullable=False, default=30)
     enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=sa.func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
@@ -199,7 +237,9 @@ class ReadingPlan(Base):
 class ReadingLog(Base):
     __tablename__ = "reading_logs"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
     )
@@ -212,8 +252,12 @@ class ReadingLog(Base):
     start_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     end_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     pages_read: Mapped[int | None] = mapped_column(Integer)
-    status: Mapped[ReadingLogStatus] = mapped_column(SqlEnum(ReadingLogStatus), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=sa.func.now())
+    status: Mapped[ReadingLogStatus] = mapped_column(
+        SqlEnum(ReadingLogStatus), nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
@@ -223,13 +267,17 @@ class ReadingLog(Base):
 
     user: Mapped[User] = relationship(back_populates="reading_logs")
 
-    __table_args__ = (Index("ix_reading_logs_user_created_at", "user_id", "created_at"),)
+    __table_args__ = (
+        Index("ix_reading_logs_user_created_at", "user_id", "created_at"),
+    )
 
 
 class Notification(Base):
     __tablename__ = "notifications"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="RESTRICT"),
@@ -242,13 +290,19 @@ class Notification(Base):
         nullable=False,
         default=NotificationStatus.SCHEDULED,
     )
-    schedule_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    schedule_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     retry_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    idempotency_key: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    idempotency_key: Mapped[str] = mapped_column(
+        String(255), unique=True, nullable=False
+    )
     payload: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
     provider_msg_id: Mapped[str | None] = mapped_column(String(255))
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=sa.func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
@@ -266,13 +320,19 @@ class Notification(Base):
 
     user: Mapped[User] = relationship(back_populates="notifications")
 
-    __table_args__ = (Index("ix_notifications_user_status_schedule", "user_id", "status", "schedule_at"),)
+    __table_args__ = (
+        Index(
+            "ix_notifications_user_status_schedule", "user_id", "status", "schedule_at"
+        ),
+    )
 
 
 class WebhookEvent(Base):
     __tablename__ = "webhook_events"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
     provider: Mapped[str] = mapped_column(String(80), nullable=False)
     event_type: Mapped[str] = mapped_column(String(80), nullable=False)
     user_id: Mapped[uuid.UUID | None] = mapped_column(
@@ -280,18 +340,26 @@ class WebhookEvent(Base):
     )
     idempotency_key: Mapped[str] = mapped_column(String(255), nullable=False)
     event_id: Mapped[str | None] = mapped_column(String(255))
-    schema_version: Mapped[str] = mapped_column(String(16), nullable=False, default="v1")
+    schema_version: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="v1"
+    )
     raw_payload: Mapped[dict] = mapped_column(JSONB, nullable=False)
     processed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     request_id: Mapped[str | None] = mapped_column(String(255))
     signature_state: Mapped[str | None] = mapped_column(String(120))
     reason_code: Mapped[str | None] = mapped_column(String(128))
     retry_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=sa.func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+    )
 
     __table_args__ = (
-        UniqueConstraint("provider", "idempotency_key", name="uq_webhook_events_provider_idempotency"),
-        UniqueConstraint("provider", "event_id", name="uq_webhook_events_provider_event_id"),
+        UniqueConstraint(
+            "provider", "idempotency_key", name="uq_webhook_events_provider_idempotency"
+        ),
+        UniqueConstraint(
+            "provider", "event_id", name="uq_webhook_events_provider_event_id"
+        ),
         Index("ix_webhook_events_processed_created", "processed", "created_at"),
         Index("ix_webhook_events_signature_state", "signature_state"),
     )
@@ -300,7 +368,9 @@ class WebhookEvent(Base):
 class OutboxEvent(Base):
     __tablename__ = "outbox_events"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
     aggregate_type: Mapped[str] = mapped_column(String(64), nullable=False)
     aggregate_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     event_type: Mapped[str] = mapped_column(String(128), nullable=False)
@@ -311,7 +381,9 @@ class OutboxEvent(Base):
         default=OutboxStatus.PENDING,
     )
     retry_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=sa.func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

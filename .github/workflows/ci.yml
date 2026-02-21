@@ -64,7 +64,7 @@ jobs:
           uv run ruff format --check .
 
       - name: Type check
-        run: uv run ty check .
+        run: uv run ty check --extra-search-path apps/backend/src .
 
       - name: Test
         run: uv run pytest

@@ -3,12 +3,10 @@ from __future__ import annotations
 import os
 from logging.config import fileConfig
 
-from alembic import context
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
-
-from godlife_backend.db.base import Base
 import godlife_backend.db.models  # noqa: F401  (ensures models are imported for metadata)
+from alembic import context
+from godlife_backend.db.base import Base
+from sqlalchemy import engine_from_config, pool
 
 config = context.config
 

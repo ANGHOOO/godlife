@@ -45,4 +45,3 @@ class OutboxStatus(StrEnum):
     IN_FLIGHT = "IN_FLIGHT"
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
-
