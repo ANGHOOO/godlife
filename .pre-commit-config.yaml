@@ -35,6 +35,9 @@ repos:
           - "alembic>=1.13"
           - "sqlalchemy>=2.0"
           - "psycopg[binary]>=3.1"
+          - "fastapi>=0.110"
+          - "pydantic>=2.7"
+          - "pytest>=8.0"
       - id: pytest
         name: pytest
         entry: pytest
