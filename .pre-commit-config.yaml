@@ -10,21 +10,29 @@ repos:
     hooks:
       - id: ruff-check
         name: ruff check
-        entry: ruff check .
-        language: system
+        entry: ruff check
+        language: python
         types: [python]
+        additional_dependencies:
+          - ruff
       - id: ruff-format
         name: ruff format
-        entry: ruff format --check .
-        language: system
+        entry: ruff format --check
+        language: python
         types: [python]
+        additional_dependencies:
+          - ruff
       - id: ty-check
         name: ty check
-        entry: ty check .
-        language: system
+        entry: ty check
+        language: python
         types: [python]
+        additional_dependencies:
+          - "ty==0.0.17"
       - id: pytest
         name: pytest
         entry: pytest
-        language: system
+        language: python
         pass_filenames: false
+        additional_dependencies:
+          - pytest
