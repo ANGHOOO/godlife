@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if ! command -v uv >/dev/null; then
+  echo "error: uv가 PATH에 없습니다. pyenv/uv 환경을 확인하세요." >&2
+  exit 1
+fi
+
+export UV_CACHE_DIR="${UV_CACHE_DIR:-/tmp/uv-cache}"
+export PRE_COMMIT_HOME="${PRE_COMMIT_HOME:-/tmp/pre-commit}"
+
+mkdir -p "${UV_CACHE_DIR}" "${PRE_COMMIT_HOME}"
+uv run pre-commit run
+

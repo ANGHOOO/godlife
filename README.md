@@ -30,7 +30,10 @@ GodLife는 운동 기록 자동화와 독서 리마인드를 결합한 습관 �
 - 타입 체크: `uv run ty check .`
 - 테스트: `uv run pytest`
 - 마이그레이션: `uv run alembic upgrade head`
-- Git hook 설치(처음 1회): `uv run pre-commit install`
+- Git hook 설치(처음 1회): `bash scripts/setup-git-hooks.sh`
+- 커밋 규칙:
+  - 위 설정 후 `git commit`마다 `pre-commit`이 자동으로 실행됩니다.
+  - 훅 실행을 우회하려면 `--no-verify`를 사용해야 합니다(권장하지 않음).
 - 커밋 전 수동 검증: `uv run pre-commit run --all-files`
 
 ## 브랜치 전략 (Git Flow)
