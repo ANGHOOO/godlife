@@ -9,6 +9,7 @@
 - 파일 삭제 전 반드시 확인 요청할 것
 - 커밋 메시지는 한국어로 작성할 것
 - 브랜치 생성 규칙: `feature/<Linear-Issue-키>-<설명>` 형식만 사용 (`feature-G...` 같은 하이픈 구분은 금지)
+  - 예시: `feature/GOD-38-db-schema-operability`
 - 커밋 메시지의 경우 Conventional Commits 1.0.0 규칙을 따를 것
   - e.g., ```feat: allow provided config object to extend other configs```
 
