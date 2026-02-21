@@ -4,8 +4,8 @@
 - 환경변수: DB URL, Redis, Kakao 토큰, LLM 키, 시크릿
 - API 명세와 라우터 동기화
 - DB 마이그레이션 dry-run
-- persistence schema 최신 리비전 확인 (`alembic current`)
-- 신규 테이블/인덱스/유니크 제약 검증 (`alembic upgrade head` 실행 후 스키마 점검)
+- persistence schema 최신 리비전 확인 (`uv run alembic -c apps/backend/alembic.ini current`)
+- 신규 테이블/인덱스/유니크 제약 검증 (`uv run alembic -c apps/backend/alembic.ini upgrade head` 실행 후 스키마 점검)
 
 ## 2. 배포 절차
 1. DB 마이그레이션
@@ -36,14 +36,14 @@
 - 배포 로그, 마이그레이션 로그, webhook 발송 추적 로그 보관
 
 ## 7. GOD-33 마이그레이션 체크리스트
-- 단계 1: `cd apps/backend && alembic upgrade head`
-- 단계 2: `alembic history`로 `001_initial_persistence_schema -> 002_add_operability_fields` 연속성 확인
+- 단계 1: `uv run alembic -c apps/backend/alembic.ini upgrade head`
+- 단계 2: `uv run alembic -c apps/backend/alembic.ini history`로 `001_initial_persistence_schema -> 002_add_operability_fields` 연속성 확인
 - 단계 3: 필수 제약 점검
   - `SELECT conname FROM pg_constraint WHERE conname LIKE '%notifications%'`
   - `SELECT indexname FROM pg_indexes WHERE tablename IN ('exercise_set_states', 'notifications', 'webhook_events')`
 - 단계 4: 롤백 검증
-  - `alembic downgrade -1`
-  - `alembic upgrade head`
+  - `uv run alembic -c apps/backend/alembic.ini downgrade -1`
+  - `uv run alembic -c apps/backend/alembic.ini upgrade head`
 - 단계 5: v2 운영 컬럼 조회
   - `SELECT column_name FROM information_schema.columns WHERE table_name='notifications' AND column_name IN ('reason_code', 'provider_response_code', 'failure_reason', 'last_error_at')`
   - `SELECT column_name FROM information_schema.columns WHERE table_name='webhook_events' AND column_name IN ('schema_version', 'signature_state', 'retry_count')`

@@ -4,13 +4,13 @@ GodLife는 운동 기록 자동화와 독서 리마인드를 결합한 습관 �
 
 ## 실행
 - `uv sync`
-- `uv run python main.py`
+- `uv run python apps/backend/main.py`
 - 백엔드 마이그레이션:
   - `cd apps/backend`
   - `export DATABASE_URL=postgresql+psycopg://<user>:<password>@127.0.0.1:5432/godlife`
-  - `alembic -c alembic.ini upgrade head`
-  - `alembic -c alembic.ini history`
-  - `alembic -c alembic.ini current`
+  - `uv run alembic -c alembic.ini upgrade head`
+  - `uv run alembic -c alembic.ini history`
+  - `uv run alembic -c alembic.ini current`
 
 ## 백엔드 공통 기술 스택
 - 패키지/의존성 관리: uv
@@ -27,18 +27,19 @@ GodLife는 운동 기록 자동화와 독서 리마인드를 결합한 습관 �
 ## 로컬 개발 루틴
 - 의존성 동기화: `uv sync`
 - 코드 정리: `uv run ruff check .` / `uv run ruff format .`
-- 타입 체크: `uv run ty check .`
+- 타입 체크: `uv run ty check --extra-search-path apps/backend/src .`
 - 테스트: `uv run pytest`
-- 마이그레이션: `uv run alembic upgrade head`
+- 마이그레이션: `cd apps/backend` 후 `uv run alembic upgrade head`
 - Git hook 설치(처음 1회): `bash scripts/setup-git-hooks.sh`
 - 커밋 규칙:
-  - 위 설정 후 `git commit`마다 `pre-commit`이 자동으로 실행되어 `ruff-check`/`ruff-format`을 검증합니다.
+  - 위 설정 후 `git commit`마다 `pre-commit`이 자동으로 실행되어 `ruff-check`/`ruff-format`/`ty-check`/`pytest`를 검증합니다.
   - 훅 실행을 우회하려면 `--no-verify`를 사용해야 합니다(권장하지 않음).
 - 커밋 전 수동 검증: `uv run pre-commit run --all-files`
 - pre-commit `ty-check` 동작 방식:
   - `pre-commit`는 자체 Python 환경(격리 환경)에서 실행됩니다.
   - 동일하게 `apps/backend` 경로에 설치된 의존성(`uv sync`)만으로는 훅 환경에서 즉시 해석되지 않으므로,
-    `.pre-commit-config.yaml`의 `ty-check`에 `fastapi`, `pydantic`, `pytest`를 명시적으로 선언했습니다.
+    `.pre-commit-config.yaml`의 `ty-check`에 `fastapi`, `pydantic`, `pytest`, `alembic`, `sqlalchemy`, `psycopg[binary]`를 명시적으로 선언했습니다.
+  - 타입 검증은 CI와 동일하게 `--extra-search-path apps/backend/src`를 사용합니다.
   - 이로 인해 CI에서 `unresolved-import`로 `fastapi`/`pydantic`/`pytest`가 탐지되는 문제를 방지합니다.
 
 ## 브랜치 전략 (Git Flow)
@@ -79,6 +80,7 @@ GodLife는 운동 기록 자동화와 독서 리마인드를 결합한 습관 �
 - `docs/state-and-policy.md`
 - `docs/scheduling-notification-policy.md`
 - `docs/observability-runbook.md`
+- `docs/persistence-schema-contract.md`
 - `docs/testing-plan.md`
 
 ### 백엔드
@@ -102,4 +104,5 @@ GodLife는 운동 기록 자동화와 독서 리마인드를 결합한 습관 �
 
 - `docs/consistency-checklist.md`
 - `docs/implementation-roadmap.md`
+- `docs/next-iteration-pr-plan.md`
 - `docs/consistency-fix-notes.md`

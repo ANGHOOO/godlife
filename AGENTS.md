@@ -7,7 +7,11 @@
 - 라이브러리/API 문서, 코드 생성, 설정 또는 구성 단계가 필요할 때, 일일이 요청하지 않더라도 항상 Context7 MCP를 사용 할 것.
 - .env 파일은 절대 읽거나 수정하지 말 것
 - 파일 삭제 전 반드시 확인 요청할 것
-- 커밋 메시지는 한국어로 작것할 것
+- 커밋 메시지는 한국어로 작성할 것
+- 커밋 메시지의 경우 Conventional Commits 1.0.0 규칙을 따를 것
+  - e.g., ```feat: allow provided config object to extend other configs```
+
+BREAKING CHANGE: `extends` key in config file is now used for extending other config files
 - 새로 생성/변경한 코드에 대해 **로컬 점검을 선행**하고 실패 소지를 확인할 것
 
 # 코드 스타일
