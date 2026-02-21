@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - develop
+      - main
+  push:
+    branches:
+      - develop
+      - main
+  workflow_dispatch:
+
+jobs:
+  branch-policy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate Git Flow branch policy
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE_BRANCH="${{ github.base_ref }}"
+          HEAD_BRANCH="${{ github.head_ref }}"
+
+          if [[ "$BASE_BRANCH" == "develop" ]]; then
+            if [[ "$HEAD_BRANCH" != feature/* ]]; then
+              echo "ERROR: develop branch에는 feature/* 브랜치만 PR 허용됩니다. (현재: $HEAD_BRANCH)"
+              exit 1
+            fi
+            echo "OK: feature 브랜치($HEAD_BRANCH) -> develop PR"
+          elif [[ "$BASE_BRANCH" == "main" ]]; then
+            if [[ "$HEAD_BRANCH" != "develop" ]]; then
+              echo "ERROR: main 브랜치에는 develop 브랜치만 PR 허용됩니다. (현재: $HEAD_BRANCH)"
+              exit 1
+            fi
+            echo "OK: develop 브랜치($HEAD_BRANCH) -> main PR"
+          else
+            echo "WARNING: 대상 브랜치 $BASE_BRANCH은(는) Git Flow 정책 대상이 아닙니다."
+          fi
+
+  backend-ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Install dependencies
+        run: uv sync --dev
+
+      - name: Lint
+        run: |
+          uv run ruff check .
+          uv run ruff format --check .
+
+      - name: Type check
+        run: uv run ty check .
+
+      - name: Test
+        run: uv run pytest
+
+      - name: Pre-commit check
+        run: uv run pre-commit run --all-files
