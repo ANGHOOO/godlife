@@ -35,4 +35,5 @@ repos:
         language: python
         pass_filenames: false
         additional_dependencies:
+          - pytest-cov
           - pytest

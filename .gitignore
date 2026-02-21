@@ -10,5 +10,5 @@ wheels/
 .venv
 .agents
 apps/backend/docs
-apps/frontend/docs 
-docs 
+apps/frontend/docs
+docs

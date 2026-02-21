@@ -10,13 +10,13 @@ This repository is intentionally lightweight and currently contains:
 Keep source changes centered in `main.py` for now. If you add modules, place reusable code under a package directory (for example `godlife/`) and keep scripts/experiments in clearly named files outside package modules.
 
 ## Build, Test, and Development Commands
-- `python main.py`  
+- `python main.py`
   Runs the current app directly.
-- `python -m venv .venv && source .venv/bin/activate`  
+- `python -m venv .venv && source .venv/bin/activate`
   Creates/uses an isolated environment.
-- `pip install -e .` (after activating venv)  
+- `pip install -e .` (after activating venv)
   Installs this package in editable mode for local development.
-- `python -m pip install pytest ruff` *(optional local tooling)*  
+- `python -m pip install pytest ruff` *(optional local tooling)*
   Installs recommended test/lint tools.
 
 ## Coding Style & Naming Conventions
