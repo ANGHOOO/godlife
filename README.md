@@ -47,6 +47,17 @@ GodLife는 운동 기록 자동화와 독서 리마인드를 결합한 습관 �
   - `develop` 대상 PR은 반드시 `feature/*` 브랜치에서만 허용
   - `main` 대상 PR은 반드시 `develop`에서만 허용
 
+## 커밋 메시지와 Linear 이슈 링크
+- 커밋 메시지 권장 형식:
+  - `<타입>: <변경 요약> (#GOD-33)`
+  - 예: `feat: 운동/독서 상태 전이 테스트 추가 (#GOD-33)`
+- 현재 사용 중인 Linear 워크스페이스:
+  - `https://linear.app/godlife`
+- GitHub 저장소에서 `#GOD-33` 링크를 자동 클릭 가능하게 하려면 GitHub Settings > General > Features > Autolinks references에서 다음처럼 등록:
+  - Prefix: `#`
+  - Target URL: `https://linear.app/godlife/issue/$1`
+  - 결과: 커밋 메시지의 `#GOD-33`이 `https://linear.app/godlife/issue/GOD-33`로 이동
+
 ## 문서/AI 협업 정책
 - AI 협업 시 공식 API 문서/라이브러리 문서는 Context7 기반 질의로 최신 규칙을 먼저 확인한다.
 - 변경 전후로 `docs/*`와 `apps/backend/docs/*`에 근거를 간결히 남긴다.
