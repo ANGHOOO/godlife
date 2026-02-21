@@ -10,5 +10,4 @@ export UV_CACHE_DIR="${UV_CACHE_DIR:-/tmp/uv-cache}"
 export PRE_COMMIT_HOME="${PRE_COMMIT_HOME:-/tmp/pre-commit}"
 
 mkdir -p "${UV_CACHE_DIR}" "${PRE_COMMIT_HOME}"
-uv run pre-commit run
-
+uv run pre-commit run ruff-check ruff-format --all-files

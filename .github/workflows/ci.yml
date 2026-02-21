@@ -42,6 +42,9 @@ jobs:
   backend-ci:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      UV_CACHE_DIR: /tmp/uv-cache
+      PRE_COMMIT_HOME: /tmp/pre-commit
 
     steps:
       - name: Checkout
@@ -70,4 +73,4 @@ jobs:
         run: uv run pytest
 
       - name: Pre-commit check
-        run: uv run pre-commit run --all-files
+        run: uv run pre-commit run ruff-check ruff-format --all-files
