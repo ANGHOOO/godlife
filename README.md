@@ -24,6 +24,8 @@ GodLife는 운동 기록 자동화와 독서 리마인드를 결합한 습관 �
 - 타입 체크: `uv run ty check .`
 - 테스트: `uv run pytest`
 - 마이그레이션: `uv run alembic upgrade head`
+- Git hook 설치(처음 1회): `uv run pre-commit install`
+- 커밋 전 수동 검증: `uv run pre-commit run --all-files`
 
 ## 브랜치 전략 (Git Flow)
 - 운영 브랜치: `main`
