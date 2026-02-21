@@ -5,10 +5,52 @@ build/
 dist/
 wheels/
 *.egg-info
+.coverage
+.coverage.*
+htmlcov/
+
+# Python tooling/test caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.pyre/
+.tox/
+.nox/
 
 # Virtual environments
 .venv
-.agents
-apps/backend/docs
-apps/frontend/docs
-docs
+.venv/
+env/
+venv/
+.python-version
+.env
+.env.*
+
+# Editor / OS generated files
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Node/tooling caches (if present in future)
+node_modules/
+
+# Logs and runtime artifacts
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build artifacts
+*.py[cod]
+*~
+
+# Project-local generated docs/report files
+security_best_practices_report.md
+uv.lock
+.agents/
+docs/
+apps/backend/docs/
+apps/frontend/docs/
