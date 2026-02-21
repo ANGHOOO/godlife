@@ -39,6 +39,7 @@ known-first-party = ["godlife", "apps"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["apps/backend/src"]
 addopts = [
   "-q",
   "--strict-markers",
