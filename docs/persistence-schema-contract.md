@@ -16,6 +16,7 @@
 ### user_profiles
 - `user_id`: FK(users.id), UNIQUE
 - 키: `age`, `height_cm`, `weight_kg`, `goal`, `experience_level`, `max_daily_minutes`, `available_equipment`, `injury_notes`
+- `height_cm`, `weight_kg`는 `Float`(소수점 허용)
 - 규칙: `user_id` 1:1
 
 ### exercise_plans
@@ -64,17 +65,19 @@
   - `(provider, idempotency_key)`
   - `(provider, event_id)`
 - webhook 운영 확장:
-  - `schema_version`, `request_id`, `signature_state`, `reason_code`, `retry_count`
+- `schema_version`, `request_id`, `signature_state`, `reason_code`, `retry_count`
+- 인덱스: `(provider, schema_version)`, `(signature_state)`
 - 인덱스: `(processed, created_at)`
 
 ### outbox_events
 - `aggregate_type`, `aggregate_id`, `event_type`, `payload`, `status`, `retry_count`
 - 상태: `PENDING`, `IN_FLIGHT`, `COMPLETED`, `FAILED`
-- 인덱스: `(status, retry_count)`
+- 인덱스: `(status, retry_count)` (`ix_outbox_events_status_retry`)
 
 ### notification_provider_codes (v2)
 - 알림별 provider 응답 코드 이력 보관
 - `notification_id`, `provider`, `provider_status_code`, `provider_response`, `captured_at`
+- 인덱스: `(notification_id)`
 
 ## 마이그레이션 레이어
 - v1: baseline schema 생성 (`001_initial_persistence_schema`)
