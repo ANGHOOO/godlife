@@ -13,7 +13,7 @@ GodLife는 운동 기록 자동화와 독서 리마인드를 결합한 습관 �
 - ORM: SQLAlchemy
 - Migration: Alembic
 - 테스트: pytest
-- 타입: ty==0.9.5
+- 타입: ty==0.0.17
 - 코드 포맷/린트: ruff
 - Git 훅: pre-commit
 - CI/CD: GitHub Actions
