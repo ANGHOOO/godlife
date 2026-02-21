@@ -73,4 +73,6 @@ jobs:
         run: uv run pytest
 
       - name: Pre-commit check
-        run: uv run pre-commit run ruff-check ruff-format --all-files
+        run: |
+          uv run pre-commit run ruff-check --all-files
+          uv run pre-commit run ruff-format --all-files
