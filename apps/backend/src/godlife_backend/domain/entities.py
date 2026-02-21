@@ -127,8 +127,25 @@ class Notification:
     retry_count: int = 0
     idempotency_key: str = ""
     payload: dict[str, object] = field(default_factory=dict)
+    reason_code: str | None = None
+    provider_response_code: str | None = None
+    failure_reason: str | None = None
+    last_error_at: datetime | None = None
+    memo: str | None = None
+    reviewed_by: str | None = None
+    reviewed_at: datetime | None = None
     created_at: datetime = field(default_factory=_now)
     updated_at: datetime = field(default_factory=_now)
+
+
+@dataclass(slots=True)
+class NotificationProviderCode:
+    id: UUID = field(default_factory=uuid4)
+    notification_id: UUID = field(default_factory=uuid4)
+    provider: str = ""
+    provider_status_code: str = ""
+    provider_response: str | None = None
+    captured_at: datetime = field(default_factory=_now)
 
 
 @dataclass(slots=True)
@@ -140,6 +157,8 @@ class WebhookEvent:
     idempotency_key: str = ""
     event_id: str | None = None
     schema_version: str = "v1"
+    request_id: str | None = None
+    signature_state: str | None = None
     raw_payload: dict[str, object] = field(default_factory=dict)
     processed: bool = False
     reason_code: str | None = None

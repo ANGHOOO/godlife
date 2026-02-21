@@ -317,12 +317,45 @@ class Notification(Base):
     memo: Mapped[str | None] = mapped_column(Text)
     reviewed_by: Mapped[str | None] = mapped_column(String(120))
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    provider_codes: Mapped[list[NotificationProviderCode]] = relationship(
+        back_populates="notification", cascade="all, delete-orphan"
+    )
 
     user: Mapped[User] = relationship(back_populates="notifications")
 
     __table_args__ = (
         Index(
             "ix_notifications_user_status_schedule", "user_id", "status", "schedule_at"
+        ),
+    )
+
+
+class NotificationProviderCode(Base):
+    __tablename__ = "notification_provider_codes"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    notification_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("notifications.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    provider: Mapped[str] = mapped_column(String(80), nullable=False)
+    provider_status_code: Mapped[str] = mapped_column(String(80), nullable=False)
+    provider_response: Mapped[str | None] = mapped_column(Text)
+    captured_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=sa.func.now(),
+    )
+
+    notification: Mapped[Notification] = relationship(back_populates="provider_codes")
+
+    __table_args__ = (
+        Index(
+            "ix_notification_provider_codes_notification_id",
+            "notification_id",
         ),
     )
 
@@ -362,6 +395,7 @@ class WebhookEvent(Base):
         ),
         Index("ix_webhook_events_processed_created", "processed", "created_at"),
         Index("ix_webhook_events_signature_state", "signature_state"),
+        Index("ix_webhook_events_provider_schema", "provider", "schema_version"),
     )
 
 
@@ -391,4 +425,4 @@ class OutboxEvent(Base):
         onupdate=func.now(),
     )
 
-    __table_args__ = (Index("ix_outbox_events_status", "status", "retry_count"),)
+    __table_args__ = (Index("ix_outbox_events_status_retry", "status", "retry_count"),)
