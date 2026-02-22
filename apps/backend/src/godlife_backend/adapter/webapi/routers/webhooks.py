@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 from typing import Annotated
 from uuid import UUID
 
@@ -38,6 +37,17 @@ class WebhookPayload(BaseModel):
     raw_payload: dict[str, object] = Field(default_factory=dict)
 
 
+def _build_idempotency_key(provider: str, payload: WebhookPayload) -> str:
+    if payload.idempotency_key is not None:
+        return payload.idempotency_key
+    if payload.event_id is not None:
+        return f"{provider}:{payload.event_type}:{payload.event_id}"
+    raise HTTPException(
+        status_code=400,
+        detail="event_id 또는 idempotency_key 중 하나는 필수입니다.",
+    )
+
+
 @router.post("/{provider}")
 def ingest_webhook(
     provider: str,
@@ -56,20 +66,12 @@ def ingest_webhook(
         event_type=payload.event_type,
         user_id=payload.user_id,
         event_id=payload.event_id,
-        idempotency_key=(
-            payload.idempotency_key
-            or (
-                f"{provider}:{payload.event_type}:{payload.event_id}"
-                if payload.event_id is not None
-                else f"{provider}:{payload.event_type}"
-            )
-        ),
+        idempotency_key=_build_idempotency_key(provider, payload),
         raw_payload=payload.raw_payload,
     )
 
-    saved_event = service.handle_event(event)
-    is_duplicate = saved_event.id != event.id
-    if is_duplicate:
+    existing = service.find_existing_event(event)
+    if existing is not None:
         return {"result": "duplicate"}
 
     has_set_result_context = (
@@ -98,4 +100,5 @@ def ingest_webhook(
         except SetOrderViolationError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
 
+    service.handle_event(event)
     return {"result": "accepted"}

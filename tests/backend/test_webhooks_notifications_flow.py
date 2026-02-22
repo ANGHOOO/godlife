@@ -116,6 +116,62 @@ def test_webhook_ingest_updates_set_and_handles_duplicate(
     assert second["result"] == "duplicate"
 
 
+def test_webhook_without_event_id_uses_payload_hash_idempotency(
+    services: tuple[ExercisePlanService, NotificationService, WebhookService],
+) -> None:
+    plan_service, _, webhook_service = services
+    plan = generate_plan(
+        request=GeneratePlanRequest(
+            user_id=uuid4(),
+            target_date=date(2026, 3, 1),
+            source="rule",
+        ),
+        service=plan_service,
+    )
+    session = plan_service.repositories[1].list_by_plan(plan.id)[0]
+    payload_set1 = WebhookPayload(
+        provider="kakao",
+        event_type="set_result",
+        plan_id=plan.id,
+        session_id=session.id,
+        set_no=1,
+        result="DONE",
+        raw_payload={"seq": 1},
+    )
+    payload_set2 = WebhookPayload(
+        provider="kakao",
+        event_type="set_result",
+        plan_id=plan.id,
+        session_id=session.id,
+        set_no=2,
+        result="DONE",
+        raw_payload={"seq": 2},
+    )
+
+    first = ingest_webhook(
+        provider="kakao",
+        payload=payload_set1,
+        service=webhook_service,
+        plan_service=plan_service,
+    )
+    second = ingest_webhook(
+        provider="kakao",
+        payload=payload_set2,
+        service=webhook_service,
+        plan_service=plan_service,
+    )
+    third = ingest_webhook(
+        provider="kakao",
+        payload=payload_set1,
+        service=webhook_service,
+        plan_service=plan_service,
+    )
+
+    assert first["result"] == "accepted"
+    assert second["result"] == "accepted"
+    assert third["result"] == "duplicate"
+
+
 def test_retry_notification_not_found_returns_404(
     services: tuple[ExercisePlanService, NotificationService, WebhookService],
 ) -> None:

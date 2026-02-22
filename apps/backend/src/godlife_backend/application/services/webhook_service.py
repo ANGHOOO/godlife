@@ -16,19 +16,9 @@ class WebhookService:
         self._outbox_repository = outbox_repository
 
     def handle_event(self, event: WebhookEvent) -> WebhookEvent:
-        existing = self._webhook_event_repository.get_by_provider_and_key(
-            event.provider, event.idempotency_key
-        )
+        existing = self.find_existing_event(event)
         if existing is not None:
             return existing
-        if event.event_id is not None:
-            existing_by_event_id = (
-                self._webhook_event_repository.get_by_provider_and_event_id(
-                    event.provider, event.event_id
-                )
-            )
-            if existing_by_event_id is not None:
-                return existing_by_event_id
 
         saved = self._webhook_event_repository.save(event)
         self._outbox_repository.save(
@@ -44,6 +34,18 @@ class WebhookService:
             )
         )
         return saved
+
+    def find_existing_event(self, event: WebhookEvent) -> WebhookEvent | None:
+        existing = self._webhook_event_repository.get_by_provider_and_key(
+            event.provider, event.idempotency_key
+        )
+        if existing is not None:
+            return existing
+        if event.event_id is not None:
+            return self._webhook_event_repository.get_by_provider_and_event_id(
+                event.provider, event.event_id
+            )
+        return None
 
     def replay_failed_events(
         self, *, provider: str, limit: int = 50
