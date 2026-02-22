@@ -26,6 +26,7 @@
   - `(target_date, status)` 인덱스
   - `(user_id, target_date)` 인덱스
   - PostgreSQL: `status='ACTIVE'`일 때 `user_id + target_date` 유니크
+  - 부분 유니크 인덱스 이름: `uq_exercise_plans_user_target_date_active`
 
 ### exercise_sessions
 - `plan_id`: FK(exercise_plans.id)
@@ -86,3 +87,5 @@
 ## 운영 점검 포인트
 - `GOD-33` 완료 시 `manual review`, webhook 파싱 버전, 알림 실패 추적 쿼리가 모두 동작해야 한다.
 - 수동 개입이 필요한 알림/웹훅 레코드 조회는 `reason_code` + `memo` + `updated_at` 기준으로 정합성 있게 확인 가능해야 한다.
+- 운동 plan 생성 충돌 매핑은 `uq_exercise_plans_user_target_date_active` 위반일 때만 `conflict`로 처리하고,
+  FK 위반 등 다른 무결성 오류는 일반 DB 오류로 분리한다.

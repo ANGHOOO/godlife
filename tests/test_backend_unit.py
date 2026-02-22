@@ -379,21 +379,29 @@ def test_exercise_plan_service_complete_active_plan_returns_none_when_missing() 
     assert service.complete_active_plan(uuid4()) is None
 
 
-def test_exercise_plan_service_generate_plan_not_implemented() -> None:
+def test_exercise_plan_service_generate_plan_creates_plan_sessions_and_sets() -> None:
+    session_repository = InMemoryExerciseSessionRepository()
+    set_state_repository = InMemoryExerciseSetStateRepository()
     service = ExercisePlanService(
         plan_repository=_PlanServiceRepo(),
-        session_repository=InMemoryExerciseSessionRepository(),
-        set_state_repository=InMemoryExerciseSetStateRepository(),
+        session_repository=session_repository,
+        set_state_repository=set_state_repository,
         outbox_repository=_OutboxStub(),
     )
 
-    with pytest.raises(NotImplementedError):
-        service.generate_plan(
-            GeneratePlanCommand(
-                user_id=uuid4(),
-                target_date=date(2026, 1, 1),
-            )
+    plan = service.generate_plan(
+        GeneratePlanCommand(
+            user_id=uuid4(),
+            target_date=date(2026, 1, 1),
         )
+    )
+
+    assert plan.status == PlanStatus.ACTIVE
+    assert plan.source == "rule"
+    sessions = session_repository.list_by_plan(plan.id)
+    assert sessions
+    for session in sessions:
+        assert len(set_state_repository.list_pending(session.id)) == session.target_sets
 
 
 def test_exercise_plan_service_complete_active_plan_not_implemented_when_exists() -> (

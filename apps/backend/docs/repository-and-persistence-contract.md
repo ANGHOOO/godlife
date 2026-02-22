@@ -13,7 +13,7 @@
 - `ExerciseSessionRepository`
   - `list_by_plan(plan_id)`, `get_by_id(session_id)`, `save(session)`
 - `ExerciseSetStateRepository`
-  - `get(session_id, set_no)`, `list_pending(plan_id)`, `save(state)`
+  - `get(session_id, set_no)`, `list_pending(session_id)`, `save(state)`
 - `ReadingPlanRepository`
   - `get_by_user(user_id)`, `save(plan)`
 - `ReadingLogRepository`
@@ -29,7 +29,9 @@
 ## 3. 영속성 규칙
 - 조회 정렬은 deterministic (`created_at desc` 기본)
 - write는 optimistic concurrency 고려
-- 동일 키 제약 충돌은 domain 충돌로 치환
+- 제약 충돌 매핑은 선택적으로 적용한다.
+  - `ExercisePlanRepository.save()`의 경우 `uq_exercise_plans_user_target_date_active` 위반만 domain 충돌(`PlanConflictError`)로 치환
+  - FK 위반/기타 무결성 오류는 원인 보존을 위해 그대로 전파
 - `WebhookEventRepository`는 `(provider, idempotency_key)`와 `(provider, event_id)` 유니크 정책을 모두 지원해야 한다.
 - `NotificationRepository`는 `idempotency_key`를 기준으로 no-op 흐름을 제공하고 `manual_review` 진입 사유를 저장 가능해야 한다.
 

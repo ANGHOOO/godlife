@@ -21,6 +21,11 @@
 ## 3. 운영 점검
 - `/healthz`, `/readyz` 2회 확인
 - 일일 알림 1건, webhook 수신 1건 테스트
+- 운동 plan 생성 검증
+  - `POST /plans/generate` 성공 응답이 `201`인지 확인
+  - `plan_source`/`source` 중 하나를 보냈을 때 `source`가 `rule|llm`으로 정규화되는지 확인
+  - 동일 `user_id + target_date` 재요청 시 `409 conflict` 확인
+  - `plan_source=""` 또는 `source=""` 요청 시 `400 validation` 확인
 - manual review 큐 empty 확인
 - `notification_provider_codes` 최근 수집 건 수집률 확인 (v2 migration 적용 여부 포함)
 

@@ -8,10 +8,16 @@
 - .env 파일은 절대 읽거나 수정하지 말 것
 - 파일 삭제 전 반드시 확인 요청할 것
 - 커밋 메시지는 한국어로 작성할 것
+- 반드시 새로운 기능을 개발할 때는 새로운 브랜치를 생성 후 작업 진행할 것
 - 브랜치 생성 규칙: `feature/<Linear-Issue-키>-<설명>` 형식만 사용 (`feature-G...` 같은 하이픈 구분은 금지)
   - 예시: `feature/GOD-38-db-schema-operability`
 - 커밋 메시지의 경우 Conventional Commits 1.0.0 규칙을 따를 것
   - e.g., ```feat: allow provided config object to extend other configs```
+- PR 생성/수정 시 본문은 반드시 아래 섹션을 포함할 것
+  - `## 요약`
+  - `## 변경점`
+  - `## 검증결과`
+  - `검증결과`에는 실제 실행한 명령과 결과(성공/실패)를 함께 기록할 것
 
 BREAKING CHANGE: `extends` key in config file is now used for extending other config files
 - 새로 생성/변경한 코드에 대해 **로컬 점검을 선행**하고 실패 소지를 확인할 것
