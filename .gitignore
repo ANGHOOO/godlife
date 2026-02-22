@@ -36,6 +36,8 @@ venv/
 
 # Node/tooling caches (if present in future)
 node_modules/
+.pnpm-store/
+apps/frontend/.next/
 
 # Logs and runtime artifacts
 *.log
