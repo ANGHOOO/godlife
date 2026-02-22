@@ -1,0 +1,84 @@
+name: godlife
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-godlife}
+      POSTGRES_USER: ${POSTGRES_USER:-godlife}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-godlife}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-godlife} -d ${POSTGRES_DB:-godlife}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 5s
+
+  backend-migrate:
+    image: ${BACKEND_MIGRATE_IMAGE:-godlife-backend-migrate:local}
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://godlife:godlife@db:5432/godlife}
+    command: [".venv/bin/alembic", "-c", "apps/backend/alembic.ini", "upgrade", "head"]
+    restart: "no"
+
+  backend-seed:
+    image: postgres:16-alpine
+    depends_on:
+      db:
+        condition: service_healthy
+      backend-migrate:
+        condition: service_completed_successfully
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD:-godlife}
+    command:
+      [
+        "sh",
+        "-c",
+        "psql -h db -U ${POSTGRES_USER:-godlife} -d ${POSTGRES_DB:-godlife} -c \"INSERT INTO users (id, kakao_user_id, name, timezone, status) VALUES ('00000000-0000-0000-0000-000000000001', 'local-seed-user-0001', 'Local Seed User', 'Asia/Seoul', 'ACTIVE') ON CONFLICT (id) DO NOTHING;\"",
+      ]
+    restart: "no"
+
+  backend:
+    image: ${BACKEND_IMAGE:-godlife-backend:local}
+    depends_on:
+      db:
+        condition: service_healthy
+      backend-migrate:
+        condition: service_completed_successfully
+      backend-seed:
+        condition: service_completed_successfully
+    environment:
+      HOST: 0.0.0.0
+      PORT: 8000
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://godlife:godlife@db:5432/godlife}
+      GODLIFE_DB_ECHO: ${GODLIFE_DB_ECHO:-false}
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    command: [".venv/bin/python", "apps/backend/main.py"]
+
+  frontend:
+    image: ${FRONTEND_IMAGE:-godlife-frontend:local}
+    depends_on:
+      backend:
+        condition: service_started
+    environment:
+      BACKEND_BASE_URL: ${BACKEND_BASE_URL:-http://backend:8000}
+      NEXT_PUBLIC_DEFAULT_USER_ID: ${NEXT_PUBLIC_DEFAULT_USER_ID:-00000000-0000-0000-0000-000000000001}
+      NODE_ENV: ${NODE_ENV:-production}
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    command: ["pnpm", "start", "--hostname", "0.0.0.0", "--port", "3000"]
+
+volumes:
+  postgres_data:

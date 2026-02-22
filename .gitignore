@@ -25,6 +25,7 @@ venv/
 .python-version
 .env
 .env.*
+!.env.example
 
 # Editor / OS generated files
 .DS_Store

@@ -1,0 +1,23 @@
+services:
+  backend-migrate:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+      target: runtime
+
+  backend:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+      target: runtime
+    environment:
+      GODLIFE_DB_ECHO: true
+
+  frontend:
+    build:
+      context: apps/frontend
+      dockerfile: Dockerfile
+      target: dev
+    command: ["pnpm", "dev", "--hostname", "0.0.0.0", "--port", "3000"]
+    environment:
+      NODE_ENV: development
