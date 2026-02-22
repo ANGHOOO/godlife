@@ -146,3 +146,88 @@ def test_create_base_reminder_returns_404_for_missing_plan(
         )
 
     assert exc_info.value.status_code == 404
+
+
+def test_create_retry_reminder_returns_400_for_mismatched_base_date(
+    service_bundle: tuple[
+        ReadingReminderService,
+        InMemoryReadingPlanRepository,
+        InMemoryReadingLogRepository,
+    ],
+) -> None:
+    service, reading_plan_repository, _ = service_bundle
+    user_id = uuid4()
+    reading_plan_repository.save(
+        ReadingPlan(
+            user_id=user_id,
+            remind_time=time(21, 0),
+            enabled=True,
+        )
+    )
+    base = create_base_reminder(
+        request=BaseReminderRequest(
+            user_id=user_id,
+            reference_date=date(2026, 2, 21),
+        ),
+        service=service,
+    )
+    assert base.notification_id is not None
+
+    with pytest.raises(HTTPException) as exc_info:
+        create_retry_reminder(
+            request=RetryReminderRequest(
+                user_id=user_id,
+                reference_date=date(2026, 2, 22),
+                base_notification_id=base.notification_id,
+            ),
+            service=service,
+        )
+
+    assert exc_info.value.status_code == 400
+
+
+def test_create_base_reminder_returns_400_for_cross_user_idempotency_key_reuse(
+    service_bundle: tuple[
+        ReadingReminderService,
+        InMemoryReadingPlanRepository,
+        InMemoryReadingLogRepository,
+    ],
+) -> None:
+    service, reading_plan_repository, _ = service_bundle
+    user1 = uuid4()
+    user2 = uuid4()
+    shared_key = "shared-base-key"
+    reading_plan_repository.save(
+        ReadingPlan(
+            user_id=user1,
+            remind_time=time(21, 0),
+            enabled=True,
+        )
+    )
+    reading_plan_repository.save(
+        ReadingPlan(
+            user_id=user2,
+            remind_time=time(21, 30),
+            enabled=True,
+        )
+    )
+    create_base_reminder(
+        request=BaseReminderRequest(
+            user_id=user1,
+            reference_date=date(2026, 2, 22),
+            idempotency_key=shared_key,
+        ),
+        service=service,
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        create_base_reminder(
+            request=BaseReminderRequest(
+                user_id=user2,
+                reference_date=date(2026, 2, 22),
+                idempotency_key=shared_key,
+            ),
+            service=service,
+        )
+
+    assert exc_info.value.status_code == 400

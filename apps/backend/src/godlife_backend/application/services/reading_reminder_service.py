@@ -72,6 +72,20 @@ class ReadingReminderService:
         self,
         command: ScheduleDailyReminderCommand,
     ) -> ReadingReminderOutcome:
+        key = command.idempotency_key or self._daily_idempotency_key(
+            user_id=command.user_id,
+            reference_date=command.reference_date,
+        )
+        existing = self._notification_repository.get_by_idempotency_key(key)
+        if existing is not None:
+            self._validate_idempotency_scope(
+                existing=existing,
+                user_id=command.user_id,
+                kind=READING_REMINDER_KIND,
+                reference_date=command.reference_date,
+            )
+            return ReadingReminderOutcome(result="duplicate", notification=existing)
+
         plan = self._reading_plan_repository.get_by_user(command.user_id)
         if plan is None:
             raise ReadingPlanNotFoundError("reading plan not found")
@@ -83,14 +97,6 @@ class ReadingReminderService:
             plan.remind_time,
             tzinfo=UTC,
         )
-        key = command.idempotency_key or self._daily_idempotency_key(
-            user_id=command.user_id,
-            reference_date=command.reference_date,
-        )
-        existing = self._notification_repository.get_by_idempotency_key(key)
-        if existing is not None:
-            return ReadingReminderOutcome(result="duplicate", notification=existing)
-
         notification = self._notification_service.create_pending_notification(
             user_id=command.user_id,
             kind=READING_REMINDER_KIND,
@@ -108,6 +114,21 @@ class ReadingReminderService:
         self,
         command: ScheduleRetryReminderCommand,
     ) -> ReadingReminderOutcome:
+        key = command.idempotency_key or self._retry_idempotency_key(
+            user_id=command.user_id,
+            reference_date=command.reference_date,
+        )
+        existing = self._notification_repository.get_by_idempotency_key(key)
+        if existing is not None:
+            self._validate_idempotency_scope(
+                existing=existing,
+                user_id=command.user_id,
+                kind=READING_REMINDER_RETRY_KIND,
+                reference_date=command.reference_date,
+                base_notification_id=command.base_notification_id,
+            )
+            return ReadingReminderOutcome(result="duplicate", notification=existing)
+
         plan = self._reading_plan_repository.get_by_user(command.user_id)
         if plan is None:
             raise ReadingPlanNotFoundError("reading plan not found")
@@ -126,18 +147,18 @@ class ReadingReminderService:
             raise ReadingReminderValidationError(
                 "base notification does not belong to user"
             )
+        if base_notification.kind != READING_REMINDER_KIND:
+            raise ReadingReminderValidationError(
+                "base notification kind must be READING_REMINDER"
+            )
+        if base_notification.schedule_at.date() != command.reference_date:
+            raise ReadingReminderValidationError(
+                "base notification date does not match reference_date"
+            )
 
         schedule_at = base_notification.schedule_at + timedelta(
             minutes=_RETRY_DELAY_MINUTES
         )
-        key = command.idempotency_key or self._retry_idempotency_key(
-            user_id=command.user_id,
-            reference_date=command.reference_date,
-        )
-        existing = self._notification_repository.get_by_idempotency_key(key)
-        if existing is not None:
-            return ReadingReminderOutcome(result="duplicate", notification=existing)
-
         notification = self._notification_service.create_pending_notification(
             user_id=command.user_id,
             kind=READING_REMINDER_RETRY_KIND,
@@ -159,6 +180,35 @@ class ReadingReminderService:
             to_date=reference_date,
         )
         return any(log.status in _NO_RETRY_STATUSES for log in logs)
+
+    def _validate_idempotency_scope(
+        self,
+        *,
+        existing: Notification,
+        user_id: UUID,
+        kind: str,
+        reference_date: date,
+        base_notification_id: UUID | None = None,
+    ) -> None:
+        payload_reference_date = existing.payload.get("reference_date")
+        expected_reference_date = reference_date.isoformat()
+        payload_base_notification_id = existing.payload.get("base_notification_id")
+        expected_base_notification_id = (
+            str(base_notification_id) if base_notification_id is not None else None
+        )
+        base_scope_mismatch = (
+            expected_base_notification_id is not None
+            and payload_base_notification_id != expected_base_notification_id
+        )
+        if (
+            existing.user_id != user_id
+            or existing.kind != kind
+            or payload_reference_date != expected_reference_date
+            or base_scope_mismatch
+        ):
+            raise ReadingReminderValidationError(
+                "idempotency key is already used by another request scope"
+            )
 
     def _daily_idempotency_key(self, *, user_id: UUID, reference_date: date) -> str:
         return f"reading:reminder:{user_id}:{reference_date.isoformat()}"
