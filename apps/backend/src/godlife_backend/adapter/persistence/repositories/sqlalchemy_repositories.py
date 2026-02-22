@@ -3,11 +3,16 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from datetime import date
+from datetime import UTC, date, datetime
 from uuid import UUID
 
 from godlife_backend.db import models as persistence_models
-from godlife_backend.db.enums import NotificationStatus, PlanStatus, SetStatus
+from godlife_backend.db.enums import (
+    NotificationStatus,
+    OutboxStatus,
+    PlanStatus,
+    SetStatus,
+)
 from godlife_backend.domain.entities import (
     ExercisePlan,
     ExerciseSession,
@@ -81,6 +86,63 @@ def _to_domain_exercise_set_state(
         actual_rest_sec=model.actual_rest_sec,
         completed_at=model.completed_at,
         skipped_at=model.skipped_at,
+        created_at=model.created_at,
+        updated_at=model.updated_at,
+    )
+
+
+def _to_domain_notification(model: persistence_models.Notification) -> Notification:
+    return Notification(
+        id=model.id,
+        user_id=model.user_id,
+        kind=model.kind,
+        related_id=model.related_id,
+        status=model.status,
+        schedule_at=model.schedule_at,
+        sent_at=model.sent_at,
+        retry_count=model.retry_count,
+        idempotency_key=model.idempotency_key,
+        payload=model.payload,
+        reason_code=model.reason_code,
+        provider_response_code=model.provider_response_code,
+        failure_reason=model.failure_reason,
+        last_error_at=model.last_error_at,
+        memo=model.memo,
+        reviewed_by=model.reviewed_by,
+        reviewed_at=model.reviewed_at,
+        created_at=model.created_at,
+        updated_at=model.updated_at,
+    )
+
+
+def _to_domain_webhook_event(model: persistence_models.WebhookEvent) -> WebhookEvent:
+    return WebhookEvent(
+        id=model.id,
+        provider=model.provider,
+        event_type=model.event_type,
+        user_id=model.user_id,
+        idempotency_key=model.idempotency_key,
+        event_id=model.event_id,
+        schema_version=model.schema_version,
+        request_id=model.request_id,
+        signature_state=model.signature_state,
+        raw_payload=model.raw_payload,
+        processed=model.processed,
+        reason_code=model.reason_code,
+        retry_count=model.retry_count,
+        created_at=model.created_at,
+    )
+
+
+def _to_domain_outbox_event(model: persistence_models.OutboxEvent) -> OutboxEvent:
+    return OutboxEvent(
+        id=model.id,
+        aggregate_type=model.aggregate_type,
+        aggregate_id=model.aggregate_id,
+        event_type=model.event_type,
+        payload=model.payload,
+        status=model.status,
+        retry_count=model.retry_count,
         created_at=model.created_at,
         updated_at=model.updated_at,
     )
@@ -336,14 +398,19 @@ class SqlAlchemyNotificationRepository(NotificationRepository):
         self._session = session
 
     def get_by_id(self, notification_id: UUID) -> Notification | None:
-        raise NotImplementedError(
-            "SQLAlchemy Notification repository not implemented yet."
-        )
+        model = self._session.get(persistence_models.Notification, notification_id)
+        if model is None:
+            return None
+        return _to_domain_notification(model)
 
     def get_by_idempotency_key(self, idempotency_key: str) -> Notification | None:
-        raise NotImplementedError(
-            "SQLAlchemy Notification repository not implemented yet."
+        statement = select(persistence_models.Notification).where(
+            persistence_models.Notification.idempotency_key == idempotency_key
         )
+        model = self._session.scalar(statement)
+        if model is None:
+            return None
+        return _to_domain_notification(model)
 
     def list(
         self,
@@ -352,14 +419,71 @@ class SqlAlchemyNotificationRepository(NotificationRepository):
         from_at: date | None = None,
         to_at: date | None = None,
     ) -> Sequence[Notification]:
-        raise NotImplementedError(
-            "SQLAlchemy Notification repository not implemented yet."
+        statement = select(persistence_models.Notification).where(
+            persistence_models.Notification.user_id == user_id
         )
+        if status is not None:
+            statement = statement.where(
+                persistence_models.Notification.status == status
+            )
+        if from_at is not None:
+            statement = statement.where(
+                persistence_models.Notification.schedule_at
+                >= datetime.combine(from_at, datetime.min.time(), tzinfo=UTC)
+            )
+        if to_at is not None:
+            statement = statement.where(
+                persistence_models.Notification.schedule_at
+                <= datetime.combine(to_at, datetime.max.time(), tzinfo=UTC)
+            )
+        statement = statement.order_by(
+            persistence_models.Notification.schedule_at.desc()
+        )
+        models = self._session.scalars(statement).all()
+        return [_to_domain_notification(model) for model in models]
 
     def save(self, notification: Notification) -> Notification:
-        raise NotImplementedError(
-            "SQLAlchemy Notification repository not implemented yet."
-        )
+        model = self._session.get(persistence_models.Notification, notification.id)
+        if model is None:
+            model = persistence_models.Notification(
+                id=notification.id,
+                user_id=notification.user_id,
+                kind=notification.kind,
+                related_id=notification.related_id,
+                status=notification.status,
+                schedule_at=notification.schedule_at,
+                sent_at=notification.sent_at,
+                retry_count=notification.retry_count,
+                idempotency_key=notification.idempotency_key,
+                payload=notification.payload,
+                reason_code=notification.reason_code,
+                provider_response_code=notification.provider_response_code,
+                failure_reason=notification.failure_reason,
+                last_error_at=notification.last_error_at,
+                memo=notification.memo,
+                reviewed_by=notification.reviewed_by,
+                reviewed_at=notification.reviewed_at,
+            )
+            self._session.add(model)
+        else:
+            model.user_id = notification.user_id
+            model.kind = notification.kind
+            model.related_id = notification.related_id
+            model.status = notification.status
+            model.schedule_at = notification.schedule_at
+            model.sent_at = notification.sent_at
+            model.retry_count = notification.retry_count
+            model.idempotency_key = notification.idempotency_key
+            model.payload = notification.payload
+            model.reason_code = notification.reason_code
+            model.provider_response_code = notification.provider_response_code
+            model.failure_reason = notification.failure_reason
+            model.last_error_at = notification.last_error_at
+            model.memo = notification.memo
+            model.reviewed_by = notification.reviewed_by
+            model.reviewed_at = notification.reviewed_at
+        self._session.flush()
+        return _to_domain_notification(model)
 
 
 class SqlAlchemyWebhookEventRepository(WebhookEventRepository):
@@ -367,26 +491,71 @@ class SqlAlchemyWebhookEventRepository(WebhookEventRepository):
         self._session = session
 
     def get_by_provider_and_key(self, provider: str, key: str) -> WebhookEvent | None:
-        raise NotImplementedError(
-            "SQLAlchemy WebhookEvent repository not implemented yet."
+        statement = select(persistence_models.WebhookEvent).where(
+            persistence_models.WebhookEvent.provider == provider,
+            persistence_models.WebhookEvent.idempotency_key == key,
         )
+        model = self._session.scalar(statement)
+        if model is None:
+            return None
+        return _to_domain_webhook_event(model)
 
     def save(self, event: WebhookEvent) -> WebhookEvent:
-        raise NotImplementedError(
-            "SQLAlchemy WebhookEvent repository not implemented yet."
-        )
+        model = self._session.get(persistence_models.WebhookEvent, event.id)
+        if model is None:
+            model = persistence_models.WebhookEvent(
+                id=event.id,
+                provider=event.provider,
+                event_type=event.event_type,
+                user_id=event.user_id,
+                idempotency_key=event.idempotency_key,
+                event_id=event.event_id,
+                schema_version=event.schema_version,
+                request_id=event.request_id,
+                signature_state=event.signature_state,
+                raw_payload=event.raw_payload,
+                processed=event.processed,
+                reason_code=event.reason_code,
+                retry_count=event.retry_count,
+            )
+            self._session.add(model)
+        else:
+            model.provider = event.provider
+            model.event_type = event.event_type
+            model.user_id = event.user_id
+            model.idempotency_key = event.idempotency_key
+            model.event_id = event.event_id
+            model.schema_version = event.schema_version
+            model.request_id = event.request_id
+            model.signature_state = event.signature_state
+            model.raw_payload = event.raw_payload
+            model.processed = event.processed
+            model.reason_code = event.reason_code
+            model.retry_count = event.retry_count
+        self._session.flush()
+        return _to_domain_webhook_event(model)
 
     def get_by_provider_and_event_id(
         self, provider: str, event_id: str
     ) -> WebhookEvent | None:
-        raise NotImplementedError(
-            "SQLAlchemy WebhookEvent repository not implemented yet."
+        statement = select(persistence_models.WebhookEvent).where(
+            persistence_models.WebhookEvent.provider == provider,
+            persistence_models.WebhookEvent.event_id == event_id,
         )
+        model = self._session.scalar(statement)
+        if model is None:
+            return None
+        return _to_domain_webhook_event(model)
 
     def mark_failed(self, event_id: UUID, reason: str | None) -> WebhookEvent | None:
-        raise NotImplementedError(
-            "SQLAlchemy WebhookEvent repository not implemented yet."
-        )
+        model = self._session.get(persistence_models.WebhookEvent, event_id)
+        if model is None:
+            return None
+        model.reason_code = reason
+        model.retry_count += 1
+        model.processed = False
+        self._session.flush()
+        return _to_domain_webhook_event(model)
 
 
 class SqlAlchemyOutboxEventRepository(OutboxEventRepository):
@@ -394,21 +563,53 @@ class SqlAlchemyOutboxEventRepository(OutboxEventRepository):
         self._session = session
 
     def lease_pending(self, limit: int = 100) -> list[OutboxEvent]:
-        raise NotImplementedError(
-            "SQLAlchemy OutboxEvent repository not implemented yet."
+        statement = (
+            select(persistence_models.OutboxEvent)
+            .where(persistence_models.OutboxEvent.status == OutboxStatus.PENDING)
+            .order_by(persistence_models.OutboxEvent.created_at.asc())
+            .limit(limit)
         )
+        models = self._session.scalars(statement).all()
+        return [_to_domain_outbox_event(model) for model in models]
 
     def save(self, event: OutboxEvent) -> OutboxEvent:
-        raise NotImplementedError(
-            "SQLAlchemy OutboxEvent repository not implemented yet."
-        )
+        model = self._session.get(persistence_models.OutboxEvent, event.id)
+        if model is None:
+            model = persistence_models.OutboxEvent(
+                id=event.id,
+                aggregate_type=event.aggregate_type,
+                aggregate_id=event.aggregate_id,
+                event_type=event.event_type,
+                payload=event.payload,
+                status=event.status,
+                retry_count=event.retry_count,
+            )
+            self._session.add(model)
+        else:
+            model.aggregate_type = event.aggregate_type
+            model.aggregate_id = event.aggregate_id
+            model.event_type = event.event_type
+            model.payload = event.payload
+            model.status = event.status
+            model.retry_count = event.retry_count
+        self._session.flush()
+        return _to_domain_outbox_event(model)
 
     def mark_complete(self, event_id: UUID) -> OutboxEvent | None:
-        raise NotImplementedError(
-            "SQLAlchemy OutboxEvent repository not implemented yet."
-        )
+        model = self._session.get(persistence_models.OutboxEvent, event_id)
+        if model is None:
+            return None
+        model.status = OutboxStatus.COMPLETED
+        self._session.flush()
+        return _to_domain_outbox_event(model)
 
     def mark_failed(self, event_id: UUID, reason: str | None) -> OutboxEvent | None:
-        raise NotImplementedError(
-            "SQLAlchemy OutboxEvent repository not implemented yet."
-        )
+        model = self._session.get(persistence_models.OutboxEvent, event_id)
+        if model is None:
+            return None
+        model.status = OutboxStatus.FAILED
+        model.retry_count += 1
+        if reason is not None:
+            model.payload = {**model.payload, "failure_reason": reason}
+        self._session.flush()
+        return _to_domain_outbox_event(model)

@@ -32,6 +32,7 @@ def get_plan_service(session: SessionDep) -> ExercisePlanService:
         session_repository=SqlAlchemyExerciseSessionRepository(session),
         set_state_repository=SqlAlchemyExerciseSetStateRepository(session),
         outbox_repository=SqlAlchemyOutboxEventRepository(session),
+        notification_repository=SqlAlchemyNotificationRepository(session),
     )
 
 
