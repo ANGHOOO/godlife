@@ -44,5 +44,10 @@ repos:
         language: python
         pass_filenames: false
         additional_dependencies:
-          - pytest-cov
           - pytest
+          - pytest-cov
+          - "fastapi>=0.110"
+          - "pydantic>=2.7"
+          - "sqlalchemy>=2.0"
+          - "alembic>=1.13"
+          - "psycopg[binary]>=3.1"
