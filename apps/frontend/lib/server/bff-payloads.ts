@@ -1,8 +1,8 @@
 type GeneratePlanBody = {
-  user_id: string;
   target_date: string;
   source?: string;
   plan_source?: string;
+  user_id: string;
 };
 
 type WebhookBody = Record<string, unknown>;

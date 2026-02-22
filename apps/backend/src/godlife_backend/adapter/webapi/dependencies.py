@@ -29,6 +29,7 @@ from godlife_backend.application.services.reading_reminder_service import (
 )
 from godlife_backend.application.services.summary_service import SummaryService
 from godlife_backend.application.services.webhook_service import WebhookService
+from godlife_backend.domain.ports import UserRepository
 from sqlalchemy.orm import Session
 
 SessionDep = Annotated[Session, Depends(get_session)]
@@ -69,6 +70,10 @@ def get_webhook_service(session: SessionDep) -> WebhookService:
         webhook_event_repository=SqlAlchemyWebhookEventRepository(session),
         outbox_repository=SqlAlchemyOutboxEventRepository(session),
     )
+
+
+def get_user_repository(session: SessionDep) -> UserRepository:
+    return SqlAlchemyUserRepository(session)
 
 
 def get_summary_service(session: SessionDep) -> SummaryService:

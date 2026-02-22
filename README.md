@@ -18,7 +18,10 @@ GodLife는 운동 기록 자동화와 독서 리마인드를 결합한 습관 �
 5. 프론트 실행
    - `cd apps/frontend`
    - `pnpm install`
-   - `BACKEND_BASE_URL=http://127.0.0.1:8000 pnpm dev`
+   - `KAKAO_CLIENT_ID=<카카오 앱 키> KAKAO_REDIRECT_URI=http://localhost:3000/api/auth/callback BACKEND_BASE_URL=http://127.0.0.1:8000 pnpm dev`
+   - 브라우저 접속 호스트와 `KAKAO_REDIRECT_URI`의 루프백 호스트(`localhost`, `127.0.0.1`, `::1`)가 섞이면 과거에 `state 검증에 실패했습니다.`가 발생할 수 있으므로, 지금은 요청 호스트 기준으로 정규화해 처리합니다.
+
+> 카카오 로그인 동작 확인을 위해 `KAKAO_CLIENT_ID`는 필수입니다. `KAKAO_CLIENT_SECRET`은 발급 형태에 따라 선택입니다.
 
 ### 2) Docker Compose로 frontend/backend/postgresql 동시 실행 (개발)
 1. 환경 템플릿 복사

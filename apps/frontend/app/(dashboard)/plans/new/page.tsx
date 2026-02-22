@@ -1,7 +1,10 @@
 import { PageHeader } from "@/components/page-header";
 import { PlanGenerateForm } from "@/components/plan-generate-form";
+import { requireCurrentSession } from "@/lib/server/auth";
 
-export default function PlanCreatePage() {
+export default async function PlanCreatePage() {
+  await requireCurrentSession();
+
   return (
     <>
       <PageHeader

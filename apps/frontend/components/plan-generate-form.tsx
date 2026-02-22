@@ -3,7 +3,6 @@
 import { FormEvent, useState } from "react";
 
 import { useGeneratePlan } from "@/hooks/use-generate-plan";
-import { DEFAULT_USER_ID } from "@/lib/client/config";
 import { ApiError } from "@/lib/types";
 
 import { StatusPill } from "./status-pill";
@@ -21,7 +20,6 @@ export function PlanGenerateForm() {
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     await mutation.mutateAsync({
-      userId: DEFAULT_USER_ID,
       targetDate,
       source
     });
@@ -35,8 +33,8 @@ export function PlanGenerateForm() {
       </p>
       <form className="form" style={{ marginTop: "0.9rem" }} onSubmit={(event) => void onSubmit(event)}>
         <label>
-          사용자 ID
-          <input value={DEFAULT_USER_ID} readOnly />
+          사용자
+          <input value="로그인 사용자 기준" readOnly />
         </label>
         <label>
           목표 날짜

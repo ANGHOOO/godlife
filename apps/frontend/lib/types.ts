@@ -22,7 +22,6 @@ export type DashboardOverview = {
 };
 
 export type PlanGenerateInput = {
-  userId: string;
   targetDate: string;
   source: "rule" | "llm";
 };
