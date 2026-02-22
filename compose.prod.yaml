@@ -1,0 +1,15 @@
+services:
+  db:
+    restart: unless-stopped
+
+  backend-migrate:
+    pull_policy: always
+    restart: "no"
+
+  backend:
+    pull_policy: always
+    restart: unless-stopped
+
+  frontend:
+    pull_policy: always
+    restart: unless-stopped
