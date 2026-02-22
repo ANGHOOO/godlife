@@ -29,14 +29,16 @@ describe("toGeneratePlanBackendPayload", () => {
 });
 
 describe("toWebhookBackendPayload", () => {
-  it("객체 payload에 provider를 주입한다", () => {
-    const payload = toWebhookBackendPayload("kakao", {
+  it("객체 payload에 provider를 주입하고 raw_payload를 보존한다", () => {
+    const source = {
       event_type: "message",
       user_id: "u-1"
-    });
+    };
+    const payload = toWebhookBackendPayload("kakao", source);
 
     expect(payload.provider).toBe("kakao");
     expect(payload.event_type).toBe("message");
+    expect(payload.raw_payload).toEqual(source);
   });
 
   it("기존 provider 값이 있더라도 경로 provider로 덮어쓴다", () => {
@@ -52,6 +54,6 @@ describe("toWebhookBackendPayload", () => {
     const payload = toWebhookBackendPayload("kakao", "raw");
 
     expect(payload.provider).toBe("kakao");
-    expect(payload.raw_payload).toBe("raw");
+    expect(payload.raw_payload).toEqual({ value: "raw" });
   });
 });

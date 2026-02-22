@@ -35,14 +35,21 @@ export function toWebhookBackendPayload(
   payload: unknown
 ): Record<string, unknown> {
   if (isPlainObject(payload)) {
+    const rawPayload = isPlainObject(payload.raw_payload)
+      ? payload.raw_payload
+      : payload;
+
     return {
       ...payload,
-      provider
+      provider,
+      raw_payload: rawPayload
     };
   }
 
   return {
     provider,
-    raw_payload: payload ?? {}
+    raw_payload: {
+      value: payload ?? null
+    }
   };
 }
