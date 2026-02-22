@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from datetime import date
+from datetime import date, datetime
 from typing import Protocol
 from uuid import UUID
 
 from godlife_backend.db.enums import NotificationStatus, PlanStatus
 from godlife_backend.domain.entities import (
+    DailySummary,
     ExercisePlan,
     ExerciseSession,
     ExerciseSetState,
@@ -19,6 +20,7 @@ from godlife_backend.domain.entities import (
     User,
     UserProfile,
     WebhookEvent,
+    WeeklySummary,
 )
 
 
@@ -158,4 +160,31 @@ class OutboxEventRepository(Protocol):
         raise NotImplementedError
 
     def mark_failed(self, event_id: UUID, reason: str | None) -> OutboxEvent | None:
+        raise NotImplementedError
+
+
+class SummaryRepository(Protocol):
+    def get_daily(self, user_id: UUID, summary_date: date) -> DailySummary | None:
+        raise NotImplementedError
+
+    def upsert_daily(self, summary: DailySummary) -> DailySummary:
+        raise NotImplementedError
+
+    def get_weekly(self, user_id: UUID, start_date: date) -> WeeklySummary | None:
+        raise NotImplementedError
+
+    def upsert_weekly(self, summary: WeeklySummary) -> WeeklySummary:
+        raise NotImplementedError
+
+    def aggregate_exercise_sets(
+        self, user_id: UUID, summary_date: date
+    ) -> tuple[int, int]:
+        raise NotImplementedError
+
+    def has_reading_completion(
+        self,
+        user_id: UUID,
+        window_start_utc: datetime,
+        window_end_utc: datetime,
+    ) -> bool:
         raise NotImplementedError

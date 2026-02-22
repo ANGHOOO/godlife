@@ -62,6 +62,8 @@ class User(Base):
     reading_plans: Mapped[list[ReadingPlan]] = relationship(back_populates="user")
     reading_logs: Mapped[list[ReadingLog]] = relationship(back_populates="user")
     notifications: Mapped[list[Notification]] = relationship(back_populates="user")
+    daily_summaries: Mapped[list[DailySummary]] = relationship(back_populates="user")
+    weekly_summaries: Mapped[list[WeeklySummary]] = relationship(back_populates="user")
 
     __table_args__ = (Index("ix_users_kakao_user_id", "kakao_user_id"),)
 
@@ -269,6 +271,93 @@ class ReadingLog(Base):
 
     __table_args__ = (
         Index("ix_reading_logs_user_created_at", "user_id", "created_at"),
+    )
+
+
+class DailySummary(Base):
+    __tablename__ = "daily_summaries"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    summary_date: Mapped[date] = mapped_column(Date, nullable=False)
+    timezone: Mapped[str] = mapped_column(String(80), nullable=False)
+    exercise_total_sets: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    exercise_done_sets: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    exercise_completion_rate: Mapped[float] = mapped_column(
+        sa.Float(), nullable=False, default=0.0
+    )
+    reading_completed: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False
+    )
+    streak_days: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    trend: Mapped[str] = mapped_column(String(16), nullable=False, default="flat")
+    computed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=sa.func.now(),
+        onupdate=func.now(),
+    )
+
+    user: Mapped[User] = relationship(back_populates="daily_summaries")
+
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id", "summary_date", name="uq_daily_summaries_user_date"
+        ),
+        Index("ix_daily_summaries_user_date", "user_id", "summary_date"),
+    )
+
+
+class WeeklySummary(Base):
+    __tablename__ = "weekly_summaries"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    start_date: Mapped[date] = mapped_column(Date, nullable=False)
+    end_date: Mapped[date] = mapped_column(Date, nullable=False)
+    timezone: Mapped[str] = mapped_column(String(80), nullable=False)
+    daily_points: Mapped[list[dict[str, object]]] = mapped_column(
+        JSONB, nullable=False, default=list
+    )
+    week_avg_completion_rate: Mapped[float] = mapped_column(
+        sa.Float(), nullable=False, default=0.0
+    )
+    streak_days: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    trend: Mapped[str] = mapped_column(String(16), nullable=False, default="flat")
+    computed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=sa.func.now(),
+        onupdate=func.now(),
+    )
+
+    user: Mapped[User] = relationship(back_populates="weekly_summaries")
+
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id", "start_date", name="uq_weekly_summaries_user_start"
+        ),
+        Index("ix_weekly_summaries_user_start", "user_id", "start_date"),
     )
 
 

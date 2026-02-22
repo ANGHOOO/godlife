@@ -177,3 +177,36 @@ class OutboxEvent:
     retry_count: int = 0
     created_at: datetime = field(default_factory=_now)
     updated_at: datetime = field(default_factory=_now)
+
+
+@dataclass(slots=True)
+class DailySummary:
+    id: UUID = field(default_factory=uuid4)
+    user_id: UUID = field(default_factory=uuid4)
+    summary_date: date = field(default_factory=date.today)
+    timezone: str = "Asia/Seoul"
+    exercise_total_sets: int = 0
+    exercise_done_sets: int = 0
+    exercise_completion_rate: float = 0.0
+    reading_completed: bool = False
+    streak_days: int = 0
+    trend: str = "flat"
+    computed_at: datetime = field(default_factory=_now)
+    created_at: datetime = field(default_factory=_now)
+    updated_at: datetime = field(default_factory=_now)
+
+
+@dataclass(slots=True)
+class WeeklySummary:
+    id: UUID = field(default_factory=uuid4)
+    user_id: UUID = field(default_factory=uuid4)
+    start_date: date = field(default_factory=date.today)
+    end_date: date = field(default_factory=date.today)
+    timezone: str = "Asia/Seoul"
+    daily_points: list[dict[str, object]] = field(default_factory=list)
+    week_avg_completion_rate: float = 0.0
+    streak_days: int = 0
+    trend: str = "flat"
+    computed_at: datetime = field(default_factory=_now)
+    created_at: datetime = field(default_factory=_now)
+    updated_at: datetime = field(default_factory=_now)
