@@ -116,7 +116,7 @@ def test_webhook_ingest_updates_set_and_handles_duplicate(
     assert second["result"] == "duplicate"
 
 
-def test_webhook_without_event_id_uses_payload_hash_idempotency(
+def test_webhook_ingest_retry_after_failed_set_context_is_accepted(
     services: tuple[ExercisePlanService, NotificationService, WebhookService],
 ) -> None:
     plan_service, _, webhook_service = services
@@ -129,47 +129,54 @@ def test_webhook_without_event_id_uses_payload_hash_idempotency(
         service=plan_service,
     )
     session = plan_service.repositories[1].list_by_plan(plan.id)[0]
-    payload_set1 = WebhookPayload(
+    payload_with_invalid_context = WebhookPayload(
         provider="kakao",
         event_type="set_result",
+        event_id="evt-retryable",
         plan_id=plan.id,
         session_id=session.id,
-        set_no=1,
+        set_no=99,
         result="DONE",
-        raw_payload={"seq": 1},
-    )
-    payload_set2 = WebhookPayload(
-        provider="kakao",
-        event_type="set_result",
-        plan_id=plan.id,
-        session_id=session.id,
-        set_no=2,
-        result="DONE",
-        raw_payload={"seq": 2},
     )
 
-    first = ingest_webhook(
+    with pytest.raises(HTTPException) as exc_info:
+        ingest_webhook(
+            provider="kakao",
+            payload=payload_with_invalid_context,
+            service=webhook_service,
+            plan_service=plan_service,
+        )
+    assert exc_info.value.status_code in {400, 409, 422}
+
+    retried = ingest_webhook(
         provider="kakao",
-        payload=payload_set1,
-        service=webhook_service,
-        plan_service=plan_service,
-    )
-    second = ingest_webhook(
-        provider="kakao",
-        payload=payload_set2,
-        service=webhook_service,
-        plan_service=plan_service,
-    )
-    third = ingest_webhook(
-        provider="kakao",
-        payload=payload_set1,
+        payload=payload_with_invalid_context.model_copy(update={"set_no": 1}),
         service=webhook_service,
         plan_service=plan_service,
     )
 
-    assert first["result"] == "accepted"
-    assert second["result"] == "accepted"
-    assert third["result"] == "duplicate"
+    assert retried["result"] == "accepted"
+
+
+def test_webhook_requires_event_id_or_idempotency_key(
+    services: tuple[ExercisePlanService, NotificationService, WebhookService],
+) -> None:
+    plan_service, _, webhook_service = services
+    payload = WebhookPayload(
+        provider="kakao",
+        event_type="set_result",
+        raw_payload={"sample": "value"},
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        ingest_webhook(
+            provider="kakao",
+            payload=payload,
+            service=webhook_service,
+            plan_service=plan_service,
+        )
+
+    assert exc_info.value.status_code == 400
 
 
 def test_retry_notification_not_found_returns_404(
