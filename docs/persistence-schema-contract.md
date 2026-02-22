@@ -83,9 +83,15 @@
 ## 마이그레이션 레이어
 - v1: baseline schema 생성 (`001_initial_persistence_schema`)
 - v2: 운영 관측/수동 대응 필드 보강 (`002_add_operability_fields`)
+- v3: 프로필 신체 수치 정합 (`003_god38_schema_alignment`)
+- v4: 요약 집계 스냅샷 테이블 추가 (`004_add_summary_aggregates`)
+- v5: 운동 중량 컬럼 실수형 정합 (`005_god33_weight_columns_float`)
+  - `exercise_sessions.target_weight_kg`: `Integer -> Float`
+  - `exercise_set_states.performed_weight_kg`: `Integer -> Float`
 
 ## 운영 점검 포인트
 - `GOD-33` 완료 시 `manual review`, webhook 파싱 버전, 알림 실패 추적 쿼리가 모두 동작해야 한다.
 - 수동 개입이 필요한 알림/웹훅 레코드 조회는 `reason_code` + `memo` + `updated_at` 기준으로 정합성 있게 확인 가능해야 한다.
 - 운동 plan 생성 충돌 매핑은 `uq_exercise_plans_user_target_date_active` 위반일 때만 `conflict`로 처리하고,
   FK 위반 등 다른 무결성 오류는 일반 DB 오류로 분리한다.
+- 운동 관련 중량 데이터는 소수점 값 저장/조회 시 손실 없이 유지되어야 한다.

@@ -136,3 +136,27 @@ GodLife는 운동 기록 자동화와 독서 리마인드를 결합한 습관 �
 - `docs/implementation-roadmap.md`
 - `docs/next-iteration-pr-plan.md`
 - `docs/consistency-fix-notes.md`
+
+## 현재 구현 상태 (2026-02-22)
+### 현재 동작 중
+- 카카오 OAuth 로그인 BFF(`GET /api/auth/login`, `GET /api/auth/callback`, `GET /api/auth/logout`)
+- 백엔드 사용자 해석 API(`POST /auth/resolve`)
+- 운동 플랜 생성(`POST /plans/generate`) 및 세트 결과 반영(`POST /plans/{plan_id}/sessions/{session_id}/sets/{set_no}/result`)
+- 웹훅 수신/중복 판정(`POST /webhooks/{provider}`)
+- 독서 기본/보완 알림 생성 API(`POST /reading/reminders/base`, `POST /reading/reminders/retry`)
+- 요약 조회 API(`GET /summary/daily`, `GET /summary/weekly`)
+- 알림 재시도 API(`POST /notifications/retry`)
+
+### 준비 중 (내부 알파 진입 전 필수)
+- 조회형 API 확장: 플랜 상세, 독서 로그 조회/수정, 알림 목록/상세
+- outbox 소비 워커/실발송 파이프라인 고정
+- 웹훅 버전 대응 및 서명 검증
+- `/readyz` 및 운영 readiness 기준
+- 세션 쿠키 위변조 방지(서명/검증)
+
+### 현재 구현 우선순위 (Linear)
+1. `GOD-33` persistence schema 정비 및 마이그레이션
+2. `GOD-27` 멱등성 키 기반 재요청 처리
+3. `GOD-31` 도메인/상태/알림 contract 정합성 체크
+4. `GOD-43` PR-07 멱등성/계약/회귀 테스트 고정
+5. `GOD-14` REQ-EX-002 세트 완료 기반 다음 동작 자동 전송
