@@ -5,7 +5,6 @@ export function generatePlan(input: PlanGenerateInput): Promise<PlanGenerateResu
   return fetchJson<PlanGenerateResult>("/api/plans/generate", {
     method: "POST",
     body: JSON.stringify({
-      user_id: input.userId,
       target_date: input.targetDate,
       source: input.source
     })

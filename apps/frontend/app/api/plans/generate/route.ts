@@ -1,10 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 
 import { requestBackend } from "@/lib/server/backend";
+import { getSessionFromRequest } from "@/lib/server/auth";
 import { toGeneratePlanBackendPayload } from "@/lib/server/bff-payloads";
 
 type GeneratePlanBody = {
-  user_id: string;
   target_date: string;
   source?: string;
   plan_source?: string;
@@ -21,7 +21,7 @@ function badRequest(message: string) {
   );
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   let payload: GeneratePlanBody;
 
   try {
@@ -30,12 +30,29 @@ export async function POST(request: Request) {
     return badRequest("JSON 본문을 확인해주세요.");
   }
 
-  if (!payload.user_id || !payload.target_date) {
-    return badRequest("`user_id`와 `target_date`는 필수입니다.");
+  const session = await getSessionFromRequest(request);
+  if (!session) {
+    return NextResponse.json(
+      {
+        error_code: "permission_error",
+        message: "로그인 상태가 필요합니다.",
+        retryable: false
+      },
+      { status: 401 }
+    );
+  }
+
+  if (!payload.target_date) {
+    return badRequest("`target_date`는 필수입니다.");
   }
 
   // Start backend request as soon as payload is validated.
-  const backendPayload = toGeneratePlanBackendPayload(payload);
+  const backendPayload = toGeneratePlanBackendPayload({
+    target_date: payload.target_date,
+    source: payload.source,
+    plan_source: payload.plan_source,
+    user_id: session.userId
+  });
   const backendPromise = requestBackend("/plans/generate", {
     method: "POST",
     body: JSON.stringify(backendPayload)

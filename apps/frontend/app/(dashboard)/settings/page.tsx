@@ -1,11 +1,10 @@
 import { PageHeader } from "@/components/page-header";
 import { getBackendBaseUrl } from "@/lib/server/config";
+import { requireCurrentSession } from "@/lib/server/auth";
 
-export default function SettingsPage() {
+export default async function SettingsPage() {
+  const session = await requireCurrentSession();
   const backendBaseUrl = getBackendBaseUrl();
-  const userId =
-    process.env.NEXT_PUBLIC_DEFAULT_USER_ID ??
-    "00000000-0000-0000-0000-000000000001";
 
   return (
     <>
@@ -18,9 +17,15 @@ export default function SettingsPage() {
         <p className="muted" style={{ marginTop: "0.6rem" }}>
           BACKEND_BASE_URL: {backendBaseUrl}
         </p>
-        <p className="muted" style={{ marginTop: "0.4rem" }}>
-          NEXT_PUBLIC_DEFAULT_USER_ID: {userId}
-        </p>
+        <div className="muted" style={{ marginTop: "0.4rem" }}>
+          세션 사용자: {session ? session.userId : "-"}
+        </div>
+        <div className="muted" style={{ marginTop: "0.4rem" }}>
+          카카오 사용자: {session ? session.kakaoUserId : "-"}
+        </div>
+        <div className="muted" style={{ marginTop: "0.4rem" }}>
+          표시 이름: {session ? session.name : "-"}
+        </div>
       </section>
     </>
   );

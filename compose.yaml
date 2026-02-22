@@ -75,6 +75,9 @@ services:
     environment:
       BACKEND_BASE_URL: ${BACKEND_BASE_URL:-http://backend:8000}
       NEXT_PUBLIC_DEFAULT_USER_ID: ${NEXT_PUBLIC_DEFAULT_USER_ID:-00000000-0000-0000-0000-000000000001}
+      KAKAO_CLIENT_ID: ${KAKAO_CLIENT_ID}
+      KAKAO_CLIENT_SECRET: ${KAKAO_CLIENT_SECRET}
+      KAKAO_REDIRECT_URI: ${KAKAO_REDIRECT_URI:-http://localhost:3000/api/auth/callback}
       NODE_ENV: ${NODE_ENV:-production}
     ports:
       - "${FRONTEND_PORT:-3000}:3000"

@@ -2,12 +2,14 @@ import Link from "next/link";
 
 import { PageHeader } from "@/components/page-header";
 import { StatusPill } from "@/components/status-pill";
+import { requireCurrentSession } from "@/lib/server/auth";
 
 type PlanDetailPageProps = {
   params: Promise<{ planId: string }>;
 };
 
 export default async function PlanDetailPage({ params }: PlanDetailPageProps) {
+  await requireCurrentSession();
   const { planId } = await params;
 
   return (

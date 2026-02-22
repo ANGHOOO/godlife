@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from fastapi import FastAPI
+from godlife_backend.adapter.webapi.routers.auth import router as auth_router
 from godlife_backend.adapter.webapi.routers.health import router as health_router
 from godlife_backend.adapter.webapi.routers.notifications import (
     router as notifications_router,
@@ -16,6 +17,7 @@ from godlife_backend.adapter.webapi.routers.webhooks import router as webhooks_r
 def create_app() -> FastAPI:
     app = FastAPI(title="GodLife API", version="0.1.0")
     app.include_router(health_router)
+    app.include_router(auth_router)
     app.include_router(plans_router)
     app.include_router(notifications_router)
     app.include_router(reading_router)

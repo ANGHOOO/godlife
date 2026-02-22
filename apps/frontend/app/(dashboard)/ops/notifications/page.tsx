@@ -1,7 +1,10 @@
 import { NotificationRetryForm } from "@/components/notification-retry-form";
 import { PageHeader } from "@/components/page-header";
+import { requireCurrentSession } from "@/lib/server/auth";
 
-export default function NotificationsOpsPage() {
+export default async function NotificationsOpsPage() {
+  await requireCurrentSession();
+
   return (
     <>
       <PageHeader

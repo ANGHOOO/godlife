@@ -1,7 +1,10 @@
 import { PageHeader } from "@/components/page-header";
 import { StatusPill } from "@/components/status-pill";
+import { requireCurrentSession } from "@/lib/server/auth";
 
-export default function WeeklySummaryPage() {
+export default async function WeeklySummaryPage() {
+  await requireCurrentSession();
+
   return (
     <>
       <PageHeader
