@@ -91,6 +91,33 @@ def _to_domain_exercise_set_state(
     )
 
 
+def _to_domain_reading_plan(model: persistence_models.ReadingPlan) -> ReadingPlan:
+    return ReadingPlan(
+        id=model.id,
+        user_id=model.user_id,
+        remind_time=model.remind_time,
+        goal_minutes=model.goal_minutes,
+        enabled=model.enabled,
+        created_at=model.created_at,
+        updated_at=model.updated_at,
+    )
+
+
+def _to_domain_reading_log(model: persistence_models.ReadingLog) -> ReadingLog:
+    return ReadingLog(
+        id=model.id,
+        user_id=model.user_id,
+        reading_plan_id=model.reading_plan_id,
+        book_title=model.book_title,
+        start_at=model.start_at,
+        end_at=model.end_at,
+        pages_read=model.pages_read,
+        status=model.status,
+        created_at=model.created_at,
+        updated_at=model.updated_at,
+    )
+
+
 def _to_domain_notification(model: persistence_models.Notification) -> Notification:
     return Notification(
         id=model.id,
@@ -358,14 +385,34 @@ class SqlAlchemyReadingPlanRepository(ReadingPlanRepository):
         self._session = session
 
     def get_by_user(self, user_id: UUID) -> ReadingPlan | None:
-        raise NotImplementedError(
-            "SQLAlchemy ReadingPlan repository not implemented yet."
+        statement = (
+            select(persistence_models.ReadingPlan)
+            .where(persistence_models.ReadingPlan.user_id == user_id)
+            .order_by(persistence_models.ReadingPlan.created_at.desc())
         )
+        model = self._session.scalar(statement)
+        if model is None:
+            return None
+        return _to_domain_reading_plan(model)
 
     def save(self, plan: ReadingPlan) -> ReadingPlan:
-        raise NotImplementedError(
-            "SQLAlchemy ReadingPlan repository not implemented yet."
-        )
+        model = self._session.get(persistence_models.ReadingPlan, plan.id)
+        if model is None:
+            model = persistence_models.ReadingPlan(
+                id=plan.id,
+                user_id=plan.user_id,
+                remind_time=plan.remind_time,
+                goal_minutes=plan.goal_minutes,
+                enabled=plan.enabled,
+            )
+            self._session.add(model)
+        else:
+            model.user_id = plan.user_id
+            model.remind_time = plan.remind_time
+            model.goal_minutes = plan.goal_minutes
+            model.enabled = plan.enabled
+        self._session.flush()
+        return _to_domain_reading_plan(model)
 
 
 class SqlAlchemyReadingLogRepository(ReadingLogRepository):
@@ -378,19 +425,53 @@ class SqlAlchemyReadingLogRepository(ReadingLogRepository):
         from_date: date | None = None,
         to_date: date | None = None,
     ) -> Sequence[ReadingLog]:
-        raise NotImplementedError(
-            "SQLAlchemy ReadingLog repository not implemented yet."
+        statement = select(persistence_models.ReadingLog).where(
+            persistence_models.ReadingLog.user_id == user_id
         )
+        if from_date is not None:
+            statement = statement.where(
+                persistence_models.ReadingLog.created_at
+                >= datetime.combine(from_date, datetime.min.time(), tzinfo=UTC)
+            )
+        if to_date is not None:
+            statement = statement.where(
+                persistence_models.ReadingLog.created_at
+                <= datetime.combine(to_date, datetime.max.time(), tzinfo=UTC)
+            )
+        statement = statement.order_by(persistence_models.ReadingLog.created_at.desc())
+        models = self._session.scalars(statement).all()
+        return [_to_domain_reading_log(model) for model in models]
 
     def get_by_id(self, log_id: UUID) -> ReadingLog | None:
-        raise NotImplementedError(
-            "SQLAlchemy ReadingLog repository not implemented yet."
-        )
+        model = self._session.get(persistence_models.ReadingLog, log_id)
+        if model is None:
+            return None
+        return _to_domain_reading_log(model)
 
     def save(self, log: ReadingLog) -> ReadingLog:
-        raise NotImplementedError(
-            "SQLAlchemy ReadingLog repository not implemented yet."
-        )
+        model = self._session.get(persistence_models.ReadingLog, log.id)
+        if model is None:
+            model = persistence_models.ReadingLog(
+                id=log.id,
+                user_id=log.user_id,
+                reading_plan_id=log.reading_plan_id,
+                book_title=log.book_title,
+                start_at=log.start_at,
+                end_at=log.end_at,
+                pages_read=log.pages_read,
+                status=log.status,
+            )
+            self._session.add(model)
+        else:
+            model.user_id = log.user_id
+            model.reading_plan_id = log.reading_plan_id
+            model.book_title = log.book_title
+            model.start_at = log.start_at
+            model.end_at = log.end_at
+            model.pages_read = log.pages_read
+            model.status = log.status
+        self._session.flush()
+        return _to_domain_reading_log(model)
 
 
 class SqlAlchemyNotificationRepository(NotificationRepository):

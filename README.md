@@ -2,15 +2,42 @@
 
 GodLife는 운동 기록 자동화와 독서 리마인드를 결합한 습관 성장 앱입니다.
 
-## 실행
-- `uv sync`
-- `uv run python apps/backend/main.py`
-- 백엔드 마이그레이션:
-  - `cd apps/backend`
-  - `export DATABASE_URL=postgresql+psycopg://<user>:<password>@127.0.0.1:5432/godlife`
-  - `uv run alembic -c alembic.ini upgrade head`
-  - `uv run alembic -c alembic.ini history`
-  - `uv run alembic -c alembic.ini current`
+## 실행 가이드
+### 1) PostgreSQL 컨테이너만 띄워서 로컬 앱 실행
+1. PostgreSQL 컨테이너 실행
+   - `docker run --name godlife-postgres -e POSTGRES_DB=godlife -e POSTGRES_USER=godlife -e POSTGRES_PASSWORD=godlife -p 5432:5432 -d postgres:16-alpine`
+2. 백엔드 의존성 동기화
+   - `uv sync`
+3. 백엔드 마이그레이션
+   - `cd apps/backend`
+   - `export DATABASE_URL=postgresql+psycopg://godlife:godlife@127.0.0.1:5432/godlife`
+   - `uv run alembic -c alembic.ini upgrade head`
+4. 백엔드 실행(프로젝트 루트)
+   - `export DATABASE_URL=postgresql+psycopg://godlife:godlife@127.0.0.1:5432/godlife`
+   - `uv run python apps/backend/main.py`
+5. 프론트 실행
+   - `cd apps/frontend`
+   - `pnpm install`
+   - `BACKEND_BASE_URL=http://127.0.0.1:8000 pnpm dev`
+
+### 2) Docker Compose로 frontend/backend/postgresql 동시 실행 (개발)
+1. 환경 템플릿 복사
+   - `cp .env.example .env`
+2. 서비스 실행
+   - `docker compose -f compose.yaml -f compose.dev.yaml up --build`
+   - compose 실행 시 `backend-migrate`와 `backend-seed`가 선행되어 스키마/기본 사용자(`00000000-0000-0000-0000-000000000001`)를 준비합니다.
+3. 확인 URL
+   - 프론트: `http://127.0.0.1:3000`
+   - 백엔드: `http://127.0.0.1:8000/healthz`
+   - 프론트 BFF health: `http://127.0.0.1:3000/api/health`
+
+### 3) Docker Compose 운영 배포 모드
+1. 배포 이미지 태그 지정
+   - `BACKEND_IMAGE=<registry>/godlife-backend:<tag>`
+   - `BACKEND_MIGRATE_IMAGE=<registry>/godlife-backend-migrate:<tag>`
+   - `FRONTEND_IMAGE=<registry>/godlife-frontend:<tag>`
+2. 운영 서비스 실행
+   - `docker compose -f compose.yaml -f compose.prod.yaml up -d`
 
 ## 백엔드 공통 기술 스택
 - 패키지/의존성 관리: uv
@@ -29,7 +56,7 @@ GodLife는 운동 기록 자동화와 독서 리마인드를 결합한 습관 �
 - 코드 정리: `uv run ruff check .` / `uv run ruff format .`
 - 타입 체크: `uv run ty check --extra-search-path apps/backend/src .`
 - 테스트: `uv run pytest`
-- 마이그레이션: `cd apps/backend` 후 `uv run alembic upgrade head`
+- 마이그레이션: `cd apps/backend` 후 `uv run alembic -c alembic.ini upgrade head`
 - Git hook 설치(처음 1회): `bash scripts/setup-git-hooks.sh`
 - 커밋 규칙:
   - 위 설정 후 `git commit`마다 `pre-commit`이 자동으로 실행되어 `ruff-check`/`ruff-format`/`ty-check`/`pytest`를 검증합니다.
@@ -45,7 +72,7 @@ GodLife는 운동 기록 자동화와 독서 리마인드를 결합한 습관 �
 ## 브랜치 전략 (Git Flow)
 - 운영 브랜치: `main`
 - 통합 브랜치: `develop`
-- 작업 브랜치: `feature/GOD-ISSUE-요약`
+- 작업 브랜치: `feature/<Linear-Issue-키>-<설명>`
 - 기본 플로우:
   - feature 브랜치에서 기능 개발
   - 로컬 테스트 완료 후 `develop`로 PR 생성 및 Merge

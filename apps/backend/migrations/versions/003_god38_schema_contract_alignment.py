@@ -5,7 +5,7 @@ from __future__ import annotations
 import sqlalchemy as sa
 from alembic import op
 
-revision = "003_god38_schema_contract_alignment"
+revision = "003_god38_schema_alignment"
 down_revision = "002_add_operability_fields"
 branch_labels = None
 depends_on = None
