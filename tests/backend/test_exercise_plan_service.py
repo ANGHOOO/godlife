@@ -235,11 +235,12 @@ def test_submit_set_result_done_schedules_next_notification() -> None:
     plan_repository = InMemoryExercisePlanRepository()
     session_repository = InMemoryExerciseSessionRepository()
     set_state_repository = InMemoryExerciseSetStateRepository()
+    outbox_repository = _InMemoryOutboxEventRepository()
     service = ExercisePlanService(
         plan_repository=plan_repository,
         session_repository=session_repository,
         set_state_repository=set_state_repository,
-        outbox_repository=_InMemoryOutboxEventRepository(),
+        outbox_repository=outbox_repository,
         notification_repository=notification_repository,
     )
     plan = service.generate_plan(
@@ -264,6 +265,8 @@ def test_submit_set_result_done_schedules_next_notification() -> None:
     assert outcome.state.status == SetStatus.DONE
     assert outcome.next_pending_set_no == 2
     assert outcome.notification_id is not None
+    events = outbox_repository.lease_pending()
+    assert any(event.event_type == "SummaryRecomputeRequested" for event in events)
 
 
 def test_submit_set_result_blocks_out_of_order_completion() -> None:

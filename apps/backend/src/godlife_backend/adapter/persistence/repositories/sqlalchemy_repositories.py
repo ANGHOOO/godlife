@@ -11,9 +11,11 @@ from godlife_backend.db.enums import (
     NotificationStatus,
     OutboxStatus,
     PlanStatus,
+    ReadingLogStatus,
     SetStatus,
 )
 from godlife_backend.domain.entities import (
+    DailySummary,
     ExercisePlan,
     ExerciseSession,
     ExerciseSetState,
@@ -24,6 +26,7 @@ from godlife_backend.domain.entities import (
     User,
     UserProfile,
     WebhookEvent,
+    WeeklySummary,
 )
 from godlife_backend.domain.ports import (
     ExercisePlanRepository,
@@ -33,11 +36,13 @@ from godlife_backend.domain.ports import (
     OutboxEventRepository,
     ReadingLogRepository,
     ReadingPlanRepository,
+    SummaryRepository,
     UserProfileRepository,
     UserRepository,
     WebhookEventRepository,
 )
-from sqlalchemy import select
+from sqlalchemy import case, func, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
 
@@ -118,6 +123,45 @@ def _to_domain_reading_log(model: persistence_models.ReadingLog) -> ReadingLog:
     )
 
 
+def _to_domain_daily_summary(
+    model: persistence_models.DailySummary,
+) -> DailySummary:
+    return DailySummary(
+        id=model.id,
+        user_id=model.user_id,
+        summary_date=model.summary_date,
+        timezone=model.timezone,
+        exercise_total_sets=model.exercise_total_sets,
+        exercise_done_sets=model.exercise_done_sets,
+        exercise_completion_rate=model.exercise_completion_rate,
+        reading_completed=model.reading_completed,
+        streak_days=model.streak_days,
+        trend=model.trend,
+        computed_at=model.computed_at,
+        created_at=model.created_at,
+        updated_at=model.updated_at,
+    )
+
+
+def _to_domain_weekly_summary(
+    model: persistence_models.WeeklySummary,
+) -> WeeklySummary:
+    return WeeklySummary(
+        id=model.id,
+        user_id=model.user_id,
+        start_date=model.start_date,
+        end_date=model.end_date,
+        timezone=model.timezone,
+        daily_points=model.daily_points,
+        week_avg_completion_rate=model.week_avg_completion_rate,
+        streak_days=model.streak_days,
+        trend=model.trend,
+        computed_at=model.computed_at,
+        created_at=model.created_at,
+        updated_at=model.updated_at,
+    )
+
+
 def _to_domain_notification(model: persistence_models.Notification) -> Notification:
     return Notification(
         id=model.id,
@@ -180,13 +224,62 @@ class SqlAlchemyUserRepository(UserRepository):
         self._session = session
 
     def get_by_id(self, user_id: UUID) -> User | None:
-        raise NotImplementedError("SQLAlchemy User repository not implemented yet.")
+        model = self._session.get(persistence_models.User, user_id)
+        if model is None:
+            return None
+        return User(
+            id=model.id,
+            kakao_user_id=model.kakao_user_id,
+            name=model.name,
+            timezone=model.timezone,
+            status=model.status,
+            created_at=model.created_at,
+            updated_at=model.updated_at,
+        )
 
     def get_by_kakao_user_id(self, kakao_user_id: str) -> User | None:
-        raise NotImplementedError("SQLAlchemy User repository not implemented yet.")
+        statement = select(persistence_models.User).where(
+            persistence_models.User.kakao_user_id == kakao_user_id
+        )
+        model = self._session.scalar(statement)
+        if model is None:
+            return None
+        return User(
+            id=model.id,
+            kakao_user_id=model.kakao_user_id,
+            name=model.name,
+            timezone=model.timezone,
+            status=model.status,
+            created_at=model.created_at,
+            updated_at=model.updated_at,
+        )
 
     def save(self, user: User) -> User:
-        raise NotImplementedError("SQLAlchemy User repository not implemented yet.")
+        model = self._session.get(persistence_models.User, user.id)
+        if model is None:
+            model = persistence_models.User(
+                id=user.id,
+                kakao_user_id=user.kakao_user_id,
+                name=user.name,
+                timezone=user.timezone,
+                status=user.status,
+            )
+            self._session.add(model)
+        else:
+            model.kakao_user_id = user.kakao_user_id
+            model.name = user.name
+            model.timezone = user.timezone
+            model.status = user.status
+        self._session.flush()
+        return User(
+            id=model.id,
+            kakao_user_id=model.kakao_user_id,
+            name=model.name,
+            timezone=model.timezone,
+            status=model.status,
+            created_at=model.created_at,
+            updated_at=model.updated_at,
+        )
 
 
 class SqlAlchemyUserProfileRepository(UserProfileRepository):
@@ -472,6 +565,168 @@ class SqlAlchemyReadingLogRepository(ReadingLogRepository):
             model.status = log.status
         self._session.flush()
         return _to_domain_reading_log(model)
+
+
+class SqlAlchemySummaryRepository(SummaryRepository):
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def get_daily(self, user_id: UUID, summary_date: date) -> DailySummary | None:
+        statement = select(persistence_models.DailySummary).where(
+            persistence_models.DailySummary.user_id == user_id,
+            persistence_models.DailySummary.summary_date == summary_date,
+        )
+        model = self._session.scalar(statement)
+        if model is None:
+            return None
+        return _to_domain_daily_summary(model)
+
+    def upsert_daily(self, summary: DailySummary) -> DailySummary:
+        insert_stmt = pg_insert(persistence_models.DailySummary).values(
+            id=summary.id,
+            user_id=summary.user_id,
+            summary_date=summary.summary_date,
+            timezone=summary.timezone,
+            exercise_total_sets=summary.exercise_total_sets,
+            exercise_done_sets=summary.exercise_done_sets,
+            exercise_completion_rate=summary.exercise_completion_rate,
+            reading_completed=summary.reading_completed,
+            streak_days=summary.streak_days,
+            trend=summary.trend,
+            computed_at=summary.computed_at,
+        )
+        upsert_stmt = insert_stmt.on_conflict_do_update(
+            constraint="uq_daily_summaries_user_date",
+            set_={
+                "timezone": insert_stmt.excluded.timezone,
+                "exercise_total_sets": insert_stmt.excluded.exercise_total_sets,
+                "exercise_done_sets": insert_stmt.excluded.exercise_done_sets,
+                "exercise_completion_rate": (
+                    insert_stmt.excluded.exercise_completion_rate
+                ),
+                "reading_completed": insert_stmt.excluded.reading_completed,
+                "streak_days": insert_stmt.excluded.streak_days,
+                "trend": insert_stmt.excluded.trend,
+                "computed_at": insert_stmt.excluded.computed_at,
+            },
+        )
+        self._session.execute(upsert_stmt)
+        model = self._session.scalar(
+            select(persistence_models.DailySummary).where(
+                persistence_models.DailySummary.user_id == summary.user_id,
+                persistence_models.DailySummary.summary_date == summary.summary_date,
+            )
+        )
+        self._session.flush()
+        if model is None:
+            raise RuntimeError("daily summary upsert did not persist a row")
+        return _to_domain_daily_summary(model)
+
+    def get_weekly(self, user_id: UUID, start_date: date) -> WeeklySummary | None:
+        statement = select(persistence_models.WeeklySummary).where(
+            persistence_models.WeeklySummary.user_id == user_id,
+            persistence_models.WeeklySummary.start_date == start_date,
+        )
+        model = self._session.scalar(statement)
+        if model is None:
+            return None
+        return _to_domain_weekly_summary(model)
+
+    def upsert_weekly(self, summary: WeeklySummary) -> WeeklySummary:
+        insert_stmt = pg_insert(persistence_models.WeeklySummary).values(
+            id=summary.id,
+            user_id=summary.user_id,
+            start_date=summary.start_date,
+            end_date=summary.end_date,
+            timezone=summary.timezone,
+            daily_points=summary.daily_points,
+            week_avg_completion_rate=summary.week_avg_completion_rate,
+            streak_days=summary.streak_days,
+            trend=summary.trend,
+            computed_at=summary.computed_at,
+        )
+        upsert_stmt = insert_stmt.on_conflict_do_update(
+            constraint="uq_weekly_summaries_user_start",
+            set_={
+                "end_date": insert_stmt.excluded.end_date,
+                "timezone": insert_stmt.excluded.timezone,
+                "daily_points": insert_stmt.excluded.daily_points,
+                "week_avg_completion_rate": (
+                    insert_stmt.excluded.week_avg_completion_rate
+                ),
+                "streak_days": insert_stmt.excluded.streak_days,
+                "trend": insert_stmt.excluded.trend,
+                "computed_at": insert_stmt.excluded.computed_at,
+            },
+        )
+        self._session.execute(upsert_stmt)
+        model = self._session.scalar(
+            select(persistence_models.WeeklySummary).where(
+                persistence_models.WeeklySummary.user_id == summary.user_id,
+                persistence_models.WeeklySummary.start_date == summary.start_date,
+            )
+        )
+        self._session.flush()
+        if model is None:
+            raise RuntimeError("weekly summary upsert did not persist a row")
+        return _to_domain_weekly_summary(model)
+
+    def aggregate_exercise_sets(
+        self, user_id: UUID, summary_date: date
+    ) -> tuple[int, int]:
+        statement = (
+            select(
+                func.count(persistence_models.ExerciseSetState.id),
+                func.coalesce(
+                    func.sum(
+                        case(
+                            (
+                                persistence_models.ExerciseSetState.status
+                                == SetStatus.DONE,
+                                1,
+                            ),
+                            else_=0,
+                        )
+                    ),
+                    0,
+                ),
+            )
+            .select_from(persistence_models.ExerciseSetState)
+            .join(
+                persistence_models.ExerciseSession,
+                persistence_models.ExerciseSetState.session_id
+                == persistence_models.ExerciseSession.id,
+            )
+            .join(
+                persistence_models.ExercisePlan,
+                persistence_models.ExerciseSession.plan_id
+                == persistence_models.ExercisePlan.id,
+            )
+            .where(
+                persistence_models.ExercisePlan.user_id == user_id,
+                persistence_models.ExercisePlan.target_date == summary_date,
+            )
+        )
+        total_sets, done_sets = self._session.execute(statement).one()
+        return int(total_sets or 0), int(done_sets or 0)
+
+    def has_reading_completion(
+        self,
+        user_id: UUID,
+        window_start_utc: datetime,
+        window_end_utc: datetime,
+    ) -> bool:
+        statement = (
+            select(persistence_models.ReadingLog.id)
+            .where(
+                persistence_models.ReadingLog.user_id == user_id,
+                persistence_models.ReadingLog.status == ReadingLogStatus.DONE,
+                persistence_models.ReadingLog.created_at >= window_start_utc,
+                persistence_models.ReadingLog.created_at <= window_end_utc,
+            )
+            .limit(1)
+        )
+        return self._session.scalar(statement) is not None
 
 
 class SqlAlchemyNotificationRepository(NotificationRepository):

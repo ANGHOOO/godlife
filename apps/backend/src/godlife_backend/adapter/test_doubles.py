@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, datetime
 from typing import Protocol
 from uuid import UUID
 
@@ -15,6 +15,7 @@ from godlife_backend.db.enums import (
     SetStatus,
 )
 from godlife_backend.domain.entities import (
+    DailySummary,
     ExercisePlan,
     ExerciseSession,
     ExerciseSetState,
@@ -25,6 +26,7 @@ from godlife_backend.domain.entities import (
     User,
     UserProfile,
     WebhookEvent,
+    WeeklySummary,
 )
 from godlife_backend.domain.ports import (
     ExercisePlanRepository,
@@ -34,6 +36,7 @@ from godlife_backend.domain.ports import (
     OutboxEventRepository,
     ReadingLogRepository,
     ReadingPlanRepository,
+    SummaryRepository,
     UserProfileRepository,
     UserRepository,
     WebhookEventRepository,
@@ -322,3 +325,63 @@ class InMemoryOutboxEventRepository(OutboxEventRepository):
             event.payload = {**event.payload, "failure_reason": reason}
         event.status = OutboxStatus.FAILED
         return event
+
+
+class InMemorySummaryRepository(SummaryRepository):
+    def __init__(self) -> None:
+        self._daily_store = _IndexedStore[DailySummary]()
+        self._weekly_store = _IndexedStore[WeeklySummary]()
+        self._daily_key_to_id: dict[tuple[UUID, date], UUID] = {}
+        self._weekly_key_to_id: dict[tuple[UUID, date], UUID] = {}
+        self._exercise_source: dict[tuple[UUID, date], tuple[int, int]] = {}
+        self._reading_source: dict[UUID, list[datetime]] = {}
+
+    def get_daily(self, user_id: UUID, summary_date: date) -> DailySummary | None:
+        summary_id = self._daily_key_to_id.get((user_id, summary_date))
+        if summary_id is None:
+            return None
+        return self._daily_store.entities.get(summary_id)
+
+    def upsert_daily(self, summary: DailySummary) -> DailySummary:
+        existing_id = self._daily_key_to_id.get((summary.user_id, summary.summary_date))
+        if existing_id is not None:
+            summary.id = existing_id
+        self._daily_store.upsert(summary)
+        self._daily_key_to_id[(summary.user_id, summary.summary_date)] = summary.id
+        return summary
+
+    def get_weekly(self, user_id: UUID, start_date: date) -> WeeklySummary | None:
+        summary_id = self._weekly_key_to_id.get((user_id, start_date))
+        if summary_id is None:
+            return None
+        return self._weekly_store.entities.get(summary_id)
+
+    def upsert_weekly(self, summary: WeeklySummary) -> WeeklySummary:
+        existing_id = self._weekly_key_to_id.get((summary.user_id, summary.start_date))
+        if existing_id is not None:
+            summary.id = existing_id
+        self._weekly_store.upsert(summary)
+        self._weekly_key_to_id[(summary.user_id, summary.start_date)] = summary.id
+        return summary
+
+    def aggregate_exercise_sets(
+        self, user_id: UUID, summary_date: date
+    ) -> tuple[int, int]:
+        return self._exercise_source.get((user_id, summary_date), (0, 0))
+
+    def has_reading_completion(
+        self,
+        user_id: UUID,
+        window_start_utc: datetime,
+        window_end_utc: datetime,
+    ) -> bool:
+        completions = self._reading_source.get(user_id, [])
+        return any(window_start_utc <= item <= window_end_utc for item in completions)
+
+    def seed_exercise(
+        self, *, user_id: UUID, summary_date: date, total_sets: int, done_sets: int
+    ) -> None:
+        self._exercise_source[(user_id, summary_date)] = (total_sets, done_sets)
+
+    def seed_reading_completion(self, *, user_id: UUID, completed_at: datetime) -> None:
+        self._reading_source.setdefault(user_id, []).append(completed_at)

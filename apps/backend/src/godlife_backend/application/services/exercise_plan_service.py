@@ -15,6 +15,7 @@ from godlife_backend.domain.entities import (
     ExerciseSession,
     ExerciseSetState,
     Notification,
+    OutboxEvent,
 )
 from godlife_backend.domain.ports import (
     ExercisePlanRepository,
@@ -230,6 +231,20 @@ class ExercisePlanService:
         saved_state = self._set_state_repository.save(state)
         next_pending_set_no: int | None = None
         notification_id: UUID | None = None
+        plan = self._plan_repository.get_by_id(command.plan_id)
+        if plan is not None:
+            self._outbox_repository.save(
+                OutboxEvent(
+                    aggregate_type="summary",
+                    aggregate_id=plan.id,
+                    event_type="SummaryRecomputeRequested",
+                    payload={
+                        "user_id": str(plan.user_id),
+                        "basis_date": plan.target_date.isoformat(),
+                        "source": "exercise_set_result",
+                    },
+                )
+            )
         if normalized_result == "DONE":
             pending = [
                 pending_state
@@ -241,7 +256,6 @@ class ExercisePlanService:
             if pending:
                 next_set = min(pending, key=lambda pending_state: pending_state.set_no)
                 next_pending_set_no = next_set.set_no
-                plan = self._plan_repository.get_by_id(command.plan_id)
                 if plan is not None:
                     notification = self._schedule_exercise_notification(
                         user_id=plan.user_id,

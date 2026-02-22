@@ -13,6 +13,8 @@ from godlife_backend.adapter.persistence.repositories.sqlalchemy_repositories im
     SqlAlchemyOutboxEventRepository,
     SqlAlchemyReadingLogRepository,
     SqlAlchemyReadingPlanRepository,
+    SqlAlchemySummaryRepository,
+    SqlAlchemyUserRepository,
     SqlAlchemyWebhookEventRepository,
 )
 from godlife_backend.adapter.persistence.session import get_session
@@ -25,6 +27,7 @@ from godlife_backend.application.services.notification_service import (
 from godlife_backend.application.services.reading_reminder_service import (
     ReadingReminderService,
 )
+from godlife_backend.application.services.summary_service import SummaryService
 from godlife_backend.application.services.webhook_service import WebhookService
 from sqlalchemy.orm import Session
 
@@ -65,4 +68,11 @@ def get_webhook_service(session: SessionDep) -> WebhookService:
     return WebhookService(
         webhook_event_repository=SqlAlchemyWebhookEventRepository(session),
         outbox_repository=SqlAlchemyOutboxEventRepository(session),
+    )
+
+
+def get_summary_service(session: SessionDep) -> SummaryService:
+    return SummaryService(
+        summary_repository=SqlAlchemySummaryRepository(session),
+        user_repository=SqlAlchemyUserRepository(session),
     )
