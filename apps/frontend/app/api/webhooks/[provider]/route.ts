@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { requestBackend } from "@/lib/server/backend";
+import { toWebhookBackendPayload } from "@/lib/server/bff-payloads";
 
 type WebhookRouteProps = {
   params: Promise<{ provider: string }>;
@@ -16,9 +17,10 @@ export async function POST(request: Request, { params }: WebhookRouteProps) {
     body = {};
   }
 
+  const forwardedPayload = toWebhookBackendPayload(provider, body);
   const backendResponse = await requestBackend(`/webhooks/${provider}`, {
     method: "POST",
-    body: JSON.stringify(body)
+    body: JSON.stringify(forwardedPayload)
   });
 
   let payload: unknown = { result: "accepted" };

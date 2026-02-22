@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { requestBackend } from "@/lib/server/backend";
+import { toGeneratePlanBackendPayload } from "@/lib/server/bff-payloads";
 
 type GeneratePlanBody = {
   user_id: string;
@@ -33,16 +34,11 @@ export async function POST(request: Request) {
     return badRequest("`user_id`와 `target_date`는 필수입니다.");
   }
 
-  const source = payload.source ?? payload.plan_source ?? "rule";
-
   // Start backend request as soon as payload is validated.
+  const backendPayload = toGeneratePlanBackendPayload(payload);
   const backendPromise = requestBackend("/plans/generate", {
     method: "POST",
-    body: JSON.stringify({
-      user_id: payload.user_id,
-      target_date: payload.target_date,
-      source
-    })
+    body: JSON.stringify(backendPayload)
   });
 
   const backendResponse = await backendPromise;
