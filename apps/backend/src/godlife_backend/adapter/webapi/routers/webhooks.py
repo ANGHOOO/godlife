@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from typing import Annotated
 from uuid import UUID
 
@@ -39,9 +40,13 @@ class WebhookPayload(BaseModel):
 
 def _build_idempotency_key(provider: str, payload: WebhookPayload) -> str:
     if payload.idempotency_key is not None:
-        return payload.idempotency_key
+        key = payload.idempotency_key.strip()
+        if key:
+            return key
     if payload.event_id is not None:
-        return f"{provider}:{payload.event_type}:{payload.event_id}"
+        event_id = payload.event_id.strip()
+        if event_id:
+            return f"{provider}:{payload.event_type}:{event_id}"
     raise HTTPException(
         status_code=400,
         detail="event_id 또는 idempotency_key 중 하나는 필수입니다.",
