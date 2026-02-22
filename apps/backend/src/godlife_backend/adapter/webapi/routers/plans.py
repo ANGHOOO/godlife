@@ -24,9 +24,9 @@ class GeneratePlanRequest(BaseModel):
     source: str | None = None
 
     def resolved_source(self) -> str:
-        if self.plan_source:
+        if self.plan_source is not None:
             return self.plan_source
-        if self.source:
+        if self.source is not None:
             return self.source
         return "rule"
 

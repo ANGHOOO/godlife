@@ -7,6 +7,8 @@ from datetime import date
 from typing import Final
 from uuid import UUID
 
+from sqlalchemy.exc import IntegrityError
+
 from godlife_backend.db.enums import PlanStatus, SetStatus
 from godlife_backend.domain.entities import (
     ExercisePlan,
@@ -111,7 +113,12 @@ class ExercisePlanService:
             source=source,
             status=PlanStatus.ACTIVE,
         )
-        saved_plan = self._plan_repository.save(plan)
+        try:
+            saved_plan = self._plan_repository.save(plan)
+        except IntegrityError as exc:
+            raise PlanConflictError(
+                "An ACTIVE exercise plan already exists for this user and target_date."
+            ) from exc
 
         for seed in _SESSION_SEEDS:
             self._validate_seed(seed)

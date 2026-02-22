@@ -16,8 +16,9 @@ from godlife_backend.application.services.exercise_plan_service import (
     PlanConflictError,
 )
 from godlife_backend.db.enums import OutboxStatus, PlanStatus, SetStatus
-from godlife_backend.domain.entities import OutboxEvent
+from godlife_backend.domain.entities import ExercisePlan, OutboxEvent
 from godlife_backend.domain.ports import OutboxEventRepository
+from sqlalchemy.exc import IntegrityError
 
 
 class _InMemoryOutboxEventRepository(OutboxEventRepository):
@@ -147,5 +148,28 @@ def test_generate_plan_rejects_invalid_source(
                 user_id=uuid4(),
                 target_date=date(2026, 2, 22),
                 source="invalid-source",
+            )
+        )
+
+
+class _IntegrityErrorPlanRepository(InMemoryExercisePlanRepository):
+    def save(self, plan: ExercisePlan) -> ExercisePlan:
+        raise IntegrityError("insert", {}, Exception("unique violation"))
+
+
+def test_generate_plan_maps_integrity_error_to_conflict() -> None:
+    service = ExercisePlanService(
+        plan_repository=_IntegrityErrorPlanRepository(),
+        session_repository=InMemoryExerciseSessionRepository(),
+        set_state_repository=InMemoryExerciseSetStateRepository(),
+        outbox_repository=_InMemoryOutboxEventRepository(),
+    )
+
+    with pytest.raises(PlanConflictError):
+        service.generate_plan(
+            GeneratePlanCommand(
+                user_id=uuid4(),
+                target_date=date(2026, 2, 22),
+                source="rule",
             )
         )

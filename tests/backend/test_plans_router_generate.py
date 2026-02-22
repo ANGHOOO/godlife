@@ -137,3 +137,18 @@ def test_generate_plan_invalid_source_returns_400(
         generate_plan(request=request, service=service)
 
     assert exc_info.value.status_code == 400
+
+
+def test_generate_plan_empty_plan_source_returns_400(
+    service: ExercisePlanService,
+) -> None:
+    request = GeneratePlanRequest(
+        user_id=uuid4(),
+        target_date=date(2026, 2, 26),
+        plan_source="",
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        generate_plan(request=request, service=service)
+
+    assert exc_info.value.status_code == 400
