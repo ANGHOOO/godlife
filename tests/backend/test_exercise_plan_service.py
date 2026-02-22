@@ -153,19 +153,71 @@ def test_generate_plan_rejects_invalid_source(
 
 
 class _IntegrityErrorPlanRepository(InMemoryExercisePlanRepository):
+    def __init__(self, db_error: Exception) -> None:
+        super().__init__()
+        self._db_error = db_error
+
     def save(self, plan: ExercisePlan) -> ExercisePlan:
-        raise IntegrityError("insert", {}, Exception("unique violation"))
+        del plan
+        raise IntegrityError("insert", {}, self._db_error)
+
+
+class _FakeDiag:
+    def __init__(self, constraint_name: str | None) -> None:
+        self.constraint_name = constraint_name
+
+
+class _FakeDbError(Exception):
+    def __init__(
+        self,
+        message: str,
+        *,
+        sqlstate: str | None = None,
+        constraint_name: str | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.sqlstate = sqlstate
+        self.pgcode = sqlstate
+        self.diag = _FakeDiag(constraint_name)
 
 
 def test_generate_plan_maps_integrity_error_to_conflict() -> None:
+    db_error = _FakeDbError(
+        "duplicate key value violates unique constraint",
+        sqlstate="23505",
+        constraint_name="uq_exercise_plans_user_target_date_active",
+    )
     service = ExercisePlanService(
-        plan_repository=_IntegrityErrorPlanRepository(),
+        plan_repository=_IntegrityErrorPlanRepository(db_error),
         session_repository=InMemoryExerciseSessionRepository(),
         set_state_repository=InMemoryExerciseSetStateRepository(),
         outbox_repository=_InMemoryOutboxEventRepository(),
     )
 
     with pytest.raises(PlanConflictError):
+        service.generate_plan(
+            GeneratePlanCommand(
+                user_id=uuid4(),
+                target_date=date(2026, 2, 22),
+                source="rule",
+            )
+        )
+
+
+def test_generate_plan_does_not_map_non_conflict_integrity_error() -> None:
+    db_error = _FakeDbError(
+        "insert or update on table violates foreign key constraint",
+        sqlstate="23503",
+        constraint_name="fk_exercise_plans_user_id",
+    )
+    service = ExercisePlanService(
+        plan_repository=_IntegrityErrorPlanRepository(db_error),
+        session_repository=InMemoryExerciseSessionRepository(),
+        set_state_repository=InMemoryExerciseSetStateRepository(),
+        outbox_repository=_InMemoryOutboxEventRepository(),
+    )
+
+    with pytest.raises(IntegrityError):
         service.generate_plan(
             GeneratePlanCommand(
                 user_id=uuid4(),

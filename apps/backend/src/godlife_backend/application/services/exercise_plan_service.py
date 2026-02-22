@@ -51,6 +51,7 @@ class InvalidPlanSourceError(ValueError):
 
 
 _ALLOWED_SOURCES: Final[frozenset[str]] = frozenset({"rule", "llm"})
+_ACTIVE_PLAN_UNIQUE_CONSTRAINT: Final[str] = "uq_exercise_plans_user_target_date_active"
 _SESSION_SEEDS: Final[tuple[_SessionSeed, ...]] = (
     _SessionSeed(
         order_no=1,
@@ -116,9 +117,12 @@ class ExercisePlanService:
         try:
             saved_plan = self._plan_repository.save(plan)
         except IntegrityError as exc:
-            raise PlanConflictError(
-                "An ACTIVE exercise plan already exists for this user and target_date."
-            ) from exc
+            if self._is_active_plan_conflict_integrity_error(exc):
+                raise PlanConflictError(
+                    "An ACTIVE exercise plan already exists "
+                    "for this user and target_date."
+                ) from exc
+            raise
 
         for seed in _SESSION_SEEDS:
             self._validate_seed(seed)
@@ -178,3 +182,22 @@ class ExercisePlanService:
             raise ValueError("target_weight_kg must be greater than or equal to 0")
         if seed.target_rest_sec is not None and seed.target_rest_sec < 0:
             raise ValueError("target_rest_sec must be greater than or equal to 0")
+
+    def _is_active_plan_conflict_integrity_error(self, exc: IntegrityError) -> bool:
+        db_error = exc.orig
+        error_message = str(db_error)
+        sqlstate = getattr(db_error, "sqlstate", None) or getattr(
+            db_error, "pgcode", None
+        )
+        if sqlstate == "23505":
+            diag = getattr(db_error, "diag", None)
+            constraint_name = getattr(diag, "constraint_name", None)
+            if constraint_name == _ACTIVE_PLAN_UNIQUE_CONSTRAINT:
+                return True
+            if _ACTIVE_PLAN_UNIQUE_CONSTRAINT in error_message:
+                return True
+        return (
+            "UNIQUE constraint failed" in error_message
+            and "exercise_plans.user_id" in error_message
+            and "exercise_plans.target_date" in error_message
+        )
