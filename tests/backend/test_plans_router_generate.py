@@ -13,7 +13,10 @@ from godlife_backend.adapter.test_doubles import (
 from godlife_backend.adapter.webapi.routers.plans import (
     GeneratePlanRequest,
     PlanResponse,
+    SetResultRequest,
+    SetResultResponse,
     generate_plan,
+    submit_set_result,
 )
 from godlife_backend.application.services.exercise_plan_service import (
     ExercisePlanService,
@@ -152,3 +155,27 @@ def test_generate_plan_empty_plan_source_returns_400(
         generate_plan(request=request, service=service)
 
     assert exc_info.value.status_code == 400
+
+
+def test_submit_set_result_returns_done_status(
+    service: ExercisePlanService,
+) -> None:
+    plan_response = generate_plan(
+        request=GeneratePlanRequest(
+            user_id=uuid4(),
+            target_date=date(2026, 2, 27),
+            source="rule",
+        ),
+        service=service,
+    )
+    session = service.repositories[1].list_by_plan(plan_response.id)[0]
+
+    response = submit_set_result(
+        plan_id=plan_response.id,
+        session_id=session.id,
+        set_no=1,
+        request=SetResultRequest(result="DONE", performed_reps=10),
+        service=service,
+    )
+    assert isinstance(response, SetResultResponse)
+    assert response.status == "DONE"

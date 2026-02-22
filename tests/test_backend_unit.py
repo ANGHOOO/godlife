@@ -442,22 +442,22 @@ class _NotificationRepo:
         return notification
 
 
-def test_notification_service_create_pending_notification_not_implemented() -> None:
+def test_notification_service_create_pending_notification_creates_scheduled() -> None:
     service = NotificationService(
         notification_repository=_NotificationRepo(),
         outbox_repository=_OutboxStub(),
     )
+    notification = service.create_pending_notification(
+        user_id=uuid4(),
+        kind="reminder",
+        related_id=None,
+        schedule_at=datetime(2026, 1, 1, 9, 0),
+    )
+    assert notification.status == NotificationStatus.SCHEDULED
+    assert notification.kind == "reminder"
 
-    with pytest.raises(NotImplementedError):
-        service.create_pending_notification(
-            user_id=uuid4(),
-            kind="reminder",
-            related_id=None,
-            schedule_at=datetime(2026, 1, 1, 9, 0),
-        )
 
-
-def test_notification_service_mark_as_retried_not_found_and_not_implemented() -> None:
+def test_notification_service_mark_as_retried_not_found_and_updates_status() -> None:
     service = NotificationService(
         notification_repository=_NotificationRepo(),
         outbox_repository=_OutboxStub(),
@@ -468,8 +468,10 @@ def test_notification_service_mark_as_retried_not_found_and_not_implemented() ->
         notification_repository=_NotificationRepo(Notification(id=uuid4())),
         outbox_repository=_OutboxStub(),
     )
-    with pytest.raises(NotImplementedError):
-        service.mark_as_retried(uuid4())
+    retried = service.mark_as_retried(uuid4())
+    assert retried is not None
+    assert retried.status == NotificationStatus.RETRY_SCHEDULED
+    assert retried.retry_count == 1
 
 
 def test_webhook_service_handle_event_and_replay_behavior() -> None:
@@ -477,14 +479,22 @@ def test_webhook_service_handle_event_and_replay_behavior() -> None:
         webhook_event_repository=InMemoryWebhookEventRepository(),
         outbox_repository=_OutboxStub(),
     )
-
-    with pytest.raises(NotImplementedError):
-        service.handle_event(
-            WebhookEvent(
-                provider="stripe",
-                event_type="payment",
-                event_id="evt-1",
-            )
+    first = service.handle_event(
+        WebhookEvent(
+            provider="stripe",
+            event_type="payment",
+            event_id="evt-1",
+            idempotency_key="stripe:payment:evt-1",
         )
+    )
+    second = service.handle_event(
+        WebhookEvent(
+            provider="stripe",
+            event_type="payment",
+            event_id="evt-1",
+            idempotency_key="stripe:payment:evt-1",
+        )
+    )
+    assert second.id == first.id
 
     assert service.replay_failed_events(provider="stripe", limit=10) == []

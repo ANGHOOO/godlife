@@ -27,13 +27,10 @@ def retry_notification(
     request: RetryNotificationRequest,
     service: Annotated[NotificationService, Depends(get_notification_service)],
 ) -> NotificationStatusResponse:
-    try:
-        notification = service.mark_as_retried(request.notification_id)
-    except NotImplementedError as exc:
-        raise HTTPException(status_code=501, detail=str(exc)) from exc
+    notification = service.mark_as_retried(request.notification_id)
     if notification is None:
         raise HTTPException(status_code=404, detail="notification not found")
 
     return NotificationStatusResponse(
-        id=notification.id, state=str(notification.status)
+        id=notification.id, state=notification.status.value
     )
